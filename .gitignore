@@ -12,6 +12,10 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
+# ---- 系统垃圾 ----
+__MACOSX/
+.DS_Store
+
 # ---- 训练产物与数据缓存 ----
 *.pt
 *.pth
