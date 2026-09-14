@@ -1,0 +1,19 @@
+# ---- 版权与体积 ----
+# 课件 slides/notes 属斯坦福版权，不入库（本地文件保留；如需本地备份可临时移除此行）
+01_Lectures/
+# 原始作业包（大二进制，已有解压副本）
+02_Assignments/_packages/
+
+# ---- 私有上下文（含个人记忆，绝不入公开仓库）----
+.workbuddy/
+
+# ---- Python 产物 ----
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# ---- 训练产物与数据缓存 ----
+*.pt
+*.pth
+*.log
+data/
