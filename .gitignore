@@ -21,3 +21,6 @@ __MACOSX/
 *.pth
 *.log
 data/
+
+# slides 文字提取层（版权材料，仅本地保留）
+06_讲义精讲/_slides_text/
