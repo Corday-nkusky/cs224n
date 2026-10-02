@@ -1,12 +1,15 @@
-# T2 · 反向传播 + 神经网络 + RNN，A2 主攻（D4–D7，预计 16–22h）
+# T2 · 反向传播与 tensor 求导 + 依存句法分析器，A2 主攻（D4–D7，预计 16–22h）
 
 > 状态：**未解锁**（前置：T1 通过）｜ **全计划不可砍的一关**
+>
+> **这次作业的范围**：书面题考 **tensor 求导**；代码是**一个 transition-based 依存句法分析器**（`parser_model.py` / `parser_transitions.py` / `run.py`，数据 `*.conll`）。
+> **RNN 不在本次作业里** —— 它在 Lec4 讲义，靠自己手推 BPTT（见验收 A4）。课程完整结构见 `00_课程大纲.md` §3。
 
 ## 验收标准
 
 | # | 标准 | 判定方式 |
 |---|------|----------|
-| A1 | A2 全部 test 通过（含数值梯度检查、RNN forward/backward） | 我看运行输出 |
+| A1 | **A2 代码**：`parser_transitions.py` 自测通过 + `run.py` 训练出**下降的 loss 曲线**（不是"跑通"，是真在学）；**A2 书面**：tensor 求导全部做完 | 我看运行输出 + 书面答案 |
 | A2 | 纸上手推：sigmoid 梯度、softmax+交叉熵合并后的简洁形式（ŷ−y）、两层 NN（affine→ReLU→affine→softmax）对第一层权重的完整链式求导 | 白板推导，我逐步核 |
 | A3 | 能解释数值梯度检查（中心差分）的原理、eps 取多大、为什么用中心差分而不是单侧 | 问答 |
 | A4 | 能解释 RNN 的 BPTT 为什么梯度会消失/爆炸：从 ∏W 的谱范数说起，并说出 3 种缓解手段各自的代价 | 推导 + 问答 |
@@ -20,8 +23,8 @@
 
 1. （0.5h）Lec3 slides 精读（backprop 计算图部分逐页看）
 2. （1h）**先在纸上完成 A2 的推导，再写代码**——顺序反了 A2 会退化成"调包"
-3. （8–12h）A2 编码：f → 神经网络 → RNN 三段，每段跑通数值梯度检查再进下一段
-4. （1h）Lec4 slides（RNN/LM 部分）
+3. （8–12h）A2 编码：**transition-based 依存句法分析器** —— 先 `parser_transitions.py` 的转移系统自测，再 `parser_model.py` 的 `forward()`，最后 `run.py` 训练
+4. （1h）Lec4 slides（RNN/LM 部分）—— **RNN 只在这里出现，A2 作业里没有**
 5. （1h）回答 A2/A4/A5 的口头版，写到本文档自答区
 
 ## 材料清单
