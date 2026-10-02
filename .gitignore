@@ -1,26 +1,11 @@
-# ---- 版权与体积 ----
-# 课件 slides/notes 属斯坦福版权，不入库（本地文件保留；如需本地备份可临时移除此行）
-01_Lectures/
-# 原始作业包（大二进制，已有解压副本）
-02_Assignments/_packages/
-
-# ---- 私有上下文（含个人记忆，绝不入公开仓库）----
+# ---- 私有上下文（个人记忆，默认不入远程；要备份可临时移除此行）----
 .workbuddy/
 
 # ---- Python 产物 ----
 __pycache__/
-*.pyc
+*.py[cod]
 .ipynb_checkpoints/
 
 # ---- 系统垃圾 ----
 __MACOSX/
 .DS_Store
-
-# ---- 训练产物与数据缓存 ----
-*.pt
-*.pth
-*.log
-data/
-
-# slides 文字提取层（版权材料，仅本地保留）
-06_讲义精讲/_slides_text/

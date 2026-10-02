@@ -1,0 +1,669 @@
+===== PAGE 1 =====
+Natural Language Processing
+with Deep Learning
+ 
+CS224N/Ling284
+Diyi Yang
+Lecture 2: Word Vectors
+===== PAGE 2 =====
+Lecture Plan
+2
+Lecture 2: Word Vectors
+1. Course organization (3 mins)
+2. Word2vec introduction (15 mins)
+3. Word2vec objective function gradients (25 mins)
+4. Optimization basics (5 mins)
+5. Can we capture the essence of word meaning more effectively by counting? (10m)
+6. Evaluating word vectors (10 mins)
+Key Goal: understand word meaning can be represented by a high -dimensional vector of 
+real numbers and can read word embeddings papers by the end of class
+===== PAGE 3 =====
+1. Course Organization
+• Audit/Waitlist
+• For other questions, please email cs224n-win2526-staff@lists.stanford.edu
+• Come to office hours/help sessions!
+• They started today
+• Come to discuss final project ideas as well as the assignments
+• Try to come early, often and off-cycle!
+• TA office hours: 3-hour blocks Mon–Sat, with multiple TAs
+• Just show up! Our friendly course staff will be on hand to assist you!
+• https://web.stanford.edu/class/cs224n/office_hours.html  
+• Instructors’ office hours (in person by default):
+• Diyi: Tuesdays 3:30-4:30pm
+• Yejin: Fridays 4:30-5:30pm
+3
+===== PAGE 4 =====
+2. How do we represent the meaning of a word?
+4
+Definition: meaning (Webster dictionary)
+• the idea that is represented by a word, phrase, etc.
+• the idea that a person wants to express by using words, signs, etc.
+• the idea that is expressed in a work of writing, art, etc.
+Commonest linguistic way of thinking of meaning:
+signifier (symbol) ⟺ signified (idea or thing)
+= denotational semantics
+tree ⟺ {
+ , 
+ , 
+ , …}
+===== PAGE 5 =====
+How do we have usable meaning in a computer?
+5
+Previously commonest NLP solution:  Use, e.g., WordNet, a thesaurus containing lists of 
+synonym sets and hypernyms (“is a” relationships) 
+[Synset('procyonid.n.01'), 
+Synset('carnivore.n.01'), 
+Synset('placental.n.01'), 
+Synset('mammal.n.01'), 
+Synset('vertebrate.n.01'), 
+Synset('chordate.n.01'), 
+Synset('animal.n.01'), 
+Synset('organism.n.01'), 
+Synset('living_thing.n.01'), 
+Synset('whole.n.02'), 
+Synset('object.n.01'), 
+Synset('physical_entity.n.01'), 
+Synset('entity.n.01')]
+noun: good 
+noun: good, goodness 
+noun: good, goodness 
+noun: commodity, trade_good, good 
+adj: good 
+adj (sat): full, good 
+adj: good 
+adj (sat): estimable, good, honorable, respectable 
+adj (sat): beneficial, good 
+adj (sat): good 
+adj (sat): good, just, upright 
+…
+adverb: well, good 
+adverb: thoroughly, soundly, good
+e.g., synonym sets containing “good”: e.g., hypernyms of “panda”:
+from nltk.corpus import wordnet as wn
+poses = { 'n':'noun', 'v':'verb', 's':'adj (s)', 'a':'adj', 'r':'adv'}
+for synset in wn.synsets("good"):
+    print("{}: {}".format(poses[synset.pos()], 
+            ", ".join([l.name() for l in synset.lemmas()])))
+from nltk.corpus import wordnet as wn
+panda = wn.synset("panda.n.01")
+hyper = lambda s: s.hypernyms()
+list(panda.closure(hyper))
+===== PAGE 6 =====
+Problems with resources like WordNet
+6
+• A useful resource but missing nuance:
+• e.g., “proficient” is listed as a synonym for “good”
+This is only correct in some contexts
+• Also, WordNet list offensive synonyms in some synonym sets without any 
+coverage of the connotations or appropriateness of words
+• Missing new meanings of words:
+• e.g., wicked, badass, nifty, wizard, genius, ninja, bombest
+• Impossible to keep up-to-date!
+• Subjective
+• Requires human labor to create and adapt
+• Can’t be used to accurately compute word similarity (see following slides)
+===== PAGE 7 =====
+Representing words as discrete symbols
+7
+In traditional NLP, we regard words as discrete symbols: 
+   hotel, conference, motel – a localist representation
+Such symbols for words can be represented by one-hot vectors:
+motel = [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0]
+hotel = [0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
+Vector dimension = number of words in vocabulary (e.g., 500,000+)
+Means one 1, the rest 0s
+===== PAGE 8 =====
+Problem with words as discrete symbols
+Example: in web search, if a user searches for “Seattle motel”, we would like to match 
+documents containing “Seattle hotel”
+   motel = [0 0 0 0 0 0 0 0 0 0 1 0 0 0 0]
+   hotel = [0 0 0 0 0 0 0 1 0 0 0 0 0 0 0]
+But these two vectors are orthogonal
+There is no natural notion of similarity for one-hot vectors!
+Solution:
+• Could try to rely on WordNet’s list of synonyms to get similarity?
+• But it is well-known to fail badly: incompleteness, etc.
+• Instead: learn to encode similarity in the vectors themselves
+Sec. 9.2.2
+8
+===== PAGE 9 =====
+Representing words by their context
+9
+• Distributional semantics: A word’s meaning is given
+by the words that frequently appear close -by
+• “You shall know a word by the company it keeps”  (J. R. Firth 1957: 11)
+• One of the most successful ideas of modern statistical NLP!
+• When a word w appears in a text, its context is the set of words that appear nearby 
+(within a fixed-size window).
+• We use the many contexts of w to build up a representation of w
+…government debt problems turning into banking crises as happened in 2009 …
+…saying that Europe needs unified banking regulation to replace the hodgepodge …
+…India has just given its banking system a shot in the arm …
+These context words will represent banking
+
+===== PAGE 10 =====
+Word vectors
+10
+We will build a dense vector for each word, chosen so that it is similar to vectors of words 
+that appear in similar contexts, measuring similarity as the vector dot (scalar) product
+Note: word vectors are also called (word) embeddings or (neural) word representations
+They are a distributed representation
+banking  =
+0.286
+0.792
+−0.177
+−0.107
+0.109
+−0.542
+0.349
+0.271
+monetary  =
+0.413
+0.582
+−0.007
+0.247
+0.216
+−0.718
+0.147
+0.051
+===== PAGE 11 =====
+3. Word2vec: Overview
+Word2vec is a framework for learning word vectors
+(Mikolov et al. 2013)
+Idea:
+• We have a large corpus (“body”) of text: a long list of words
+• Every word in a fixed vocabulary is represented by a vector
+• Go through each position t in the text, which has a center 
+word c and context (“outside”) words o
+• Use the similarity of the word vectors for c and o to calculate 
+the probability of o given c (or vice versa)
+• Keep adjusting the word vectors to maximize this probability
+11
+Skip-gram model 
+(Mikolov et al. 2013) 
+===== PAGE 12 =====
+Word2Vec Overview
+Example windows and process for computing  𝑃 𝑤𝑡+𝑗 | 𝑤𝑡
+…crisesbankingintoturningproblems… as
+center word
+at position t
+outside context words
+in window of size 2
+outside context words
+in window of size 2
+𝑃 𝑤𝑡+1 | 𝑤𝑡
+𝑃 𝑤𝑡+2 | 𝑤𝑡
+𝑃 𝑤𝑡−1 | 𝑤𝑡
+𝑃 𝑤𝑡−2 | 𝑤𝑡
+12
+===== PAGE 13 =====
+Word2Vec Overview
+Example windows and process for computing  𝑃 𝑤𝑡+𝑗 | 𝑤𝑡
+…crisesbankingintoturningproblems… as
+center word
+at position t
+outside context words
+in window of size 2
+outside context words
+in window of size 2
+𝑃 𝑤𝑡+1 | 𝑤𝑡
+𝑃 𝑤𝑡+2 | 𝑤𝑡
+𝑃 𝑤𝑡−1 | 𝑤𝑡
+𝑃 𝑤𝑡−2 | 𝑤𝑡
+13
+===== PAGE 14 =====
+Word2Vec: objective function
+14
+For each position 𝑡 = 1, … , 𝑇, predict context words within a window of fixed size m, 
+given center word 𝑤𝑡. Data likelihood:
+𝐿 𝜃 = ෑ
+𝑡=1
+𝑇
+ෑ
+−𝑚≤𝑗≤𝑚
+𝑗≠0
+𝑃 𝑤𝑡+𝑗 | 𝑤𝑡; 𝜃
+The objective function 𝐽 𝜃  is the (average) negative log likelihood:
+𝐽 𝜃 = − 1
+𝑇 log 𝐿(𝜃) = − 1
+𝑇 ෍
+𝑡=1
+𝑇
+෍
+−𝑚≤𝑗≤𝑚
+𝑗≠0
+log 𝑃 𝑤𝑡+𝑗 | 𝑤𝑡; 𝜃
+Minimizing objective function ⟺ Maximizing predictive accuracy
+Likelihood =
+𝜃 is all variables 
+to be optimized
+sometimes called a cost or loss function
+===== PAGE 15 =====
+Word2Vec: objective function
+15
+• We want to minimize the objective function:
+𝐽 𝜃 = − 1
+𝑇 ෍
+𝑡=1
+𝑇
+෍
+−𝑚≤𝑗≤𝑚
+𝑗≠0
+log 𝑃 𝑤𝑡+𝑗 | 𝑤𝑡; 𝜃
+• Question: How to calculate 𝑃 𝑤𝑡+𝑗 | 𝑤𝑡; 𝜃  ?
+• Answer: We will use two vectors per word w:
+• 𝑣𝑤 when w is a center word
+• 𝑢𝑤 when w is a context word
+• Then for a center word c and a context word o:
+𝑃 𝑜 𝑐 = exp(𝑢𝑜𝑇𝑣𝑐)
+σ𝑤∈𝑉 exp(𝑢𝑤𝑇 𝑣𝑐)
+===== PAGE 16 =====
+Word2Vec with Vectors
+• Example windows and process for computing 𝑃 𝑤𝑡+𝑗 | 𝑤𝑡
+• 𝑃 𝑢𝑝𝑟𝑜𝑏𝑙𝑒𝑚𝑠 | 𝑣𝑖𝑛𝑡𝑜  short for P 𝑝𝑟𝑜𝑏𝑙𝑒𝑚𝑠 | 𝑖𝑛𝑡𝑜 ; 𝑢𝑝𝑟𝑜𝑏𝑙𝑒𝑚𝑠, 𝑣𝑖𝑛𝑡𝑜, 𝜃
+…crisesbankingintoturningproblems… as
+center word
+at position t
+outside context words
+in window of size 2
+outside context words
+in window of size 2
+𝑃 𝑢𝑏𝑎𝑛𝑘𝑖𝑛𝑔 |𝑣𝑖𝑛𝑡𝑜
+𝑃 𝑢𝑐𝑟𝑖𝑠𝑖𝑠 |𝑣𝑖𝑛𝑡𝑜
+𝑃 𝑢𝑡𝑢𝑛𝑖𝑛𝑔 | 𝑣𝑖𝑛𝑡𝑜
+𝑃 𝑢𝑝𝑟𝑜𝑏𝑙𝑒𝑚𝑠 | 𝑣𝑖𝑛𝑡𝑜
+16
+===== PAGE 17 =====
+Word2Vec: prediction function
+𝑃 𝑜 𝑐 = exp(𝑢𝑜𝑇𝑣𝑐)
+σ𝑤∈𝑉 exp(𝑢𝑤𝑇 𝑣𝑐)
+• This is an example of the softmax function ℝ𝑛 → (0,1)𝑛
+softmax 𝑥𝑖 = exp(𝑥𝑖)
+σ𝑗=1
+𝑛 exp(𝑥𝑗) = 𝑝𝑖
+• The softmax function maps arbitrary values 𝑥𝑖 to a probability distribution 𝑝𝑖
+• “max” because amplifies probability of largest 𝑥𝑖
+• “soft” because still assigns some probability to smaller 𝑥𝑖
+• Frequently used in Deep Learning
+① Dot product compares similarity of o and c.
+ 𝑢𝑇𝑣 = 𝑢 ⋅ 𝑣 = σ𝑖=1
+𝑛 𝑢𝑖𝑣𝑖
+Larger dot product = larger probability
+③ Normalize over entire vocabulary 
+to give probability distribution
+17
+② Exponentiation makes anything positive
+Open 
+region
+But sort of a weird name 
+because it returns a distribution!
+===== PAGE 18 =====
+To train the model: Optimize value of parameters to minimize loss
+18
+To train a model, we gradually adjust parameters to minimize a loss
+• Recall: 𝜃 represents all the 
+model parameters, in one
+long vector
+• In our case, with 
+d-dimensional vectors and 
+V-many words, we have →
+• Remember: every word has 
+two vectors
+• We optimize these parameters by walking down the gradient (see right figure)
+• We compute all vector gradients!
+
+===== PAGE 19 =====
+Interactive Session!
+19
+• 𝐿 𝜃 = ς𝑡=1
+𝑇 ς−𝑚≤𝑗≤𝑚
+𝑗≠0
+𝑃 𝑤𝑡+𝑗 | 𝑤𝑡; 𝜃
+• For a center word c and a context word o:   𝑃 𝑜 𝑐 =
+exp(𝑢𝑜𝑇𝑣𝑐)
+σ𝑤∈𝑉 exp(𝑢𝑤𝑇 𝑣𝑐)
+===== PAGE 20 =====
+4. Optimization: Gradient Descent
+• We have a cost function 𝐽 𝜃  we want to minimize
+• Gradient Descent is an algorithm to minimize 𝐽 𝜃  
+• Idea: for current value of 𝜃, calculate gradient of 𝐽 𝜃 , then take small step in direction 
+of negative gradient. Repeat.
+Note: Our 
+objectives
+may not 
+be convex
+like this 
+But life turns 
+out to be 
+okay ☺
+27
+===== PAGE 21 =====
+• Update equation (in matrix notation):
+• Update equation (for single parameter):
+• Algorithm:
+Gradient Descent
+𝛼 = step size or learning rate
+28
+===== PAGE 22 =====
+Stochastic Gradient Descent
+• Problem: 𝐽 𝜃  is a function of all windows in the corpus (potentially billions!)
+• So                 is very expensive to compute
+• You would wait a very long time before making a single update!
+• Very bad idea for pretty much all neural nets!
+• Solution: Stochastic gradient descent (SGD)
+• Repeatedly sample windows, and update after each one
+• Algorithm:
+29
+Mini Batch 
+Gradient Descent
+===== PAGE 23 =====
+Word2vec parameters         …            and computations
+•
+•
+•
+•
+•
+•
+ • 
+•
+•
+•
+•
+•
+• 
+•
+•
+•
+•
+•
+• 
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+ • 
+•
+•
+•
+•
+•
+• 
+•
+•
+•
+•
+•
+• 
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+            
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+      U                           V                             𝑈 ⋅ 𝑣4𝑇           softmax(𝑈 ⋅ 𝑣4𝑇)
+   outside             center                       dot product       probabilities
+                                                            The model makes the same predictions at each position
+30
+We want a model that gives a reasonably high 
+probability estimate to all words that occur in the 
+context (at all often)
+“Bag of words” model!
+===== PAGE 24 =====
+Word2vec maximizes objective function by 
+putting similar words nearby in space
+31
+===== PAGE 25 =====
+Word2vec algorithm family ( Mikolov et al. 2013): More details
+Why two vectors? → Easier optimization. Average both at the end
+• But can implement the algorithm with just one vector per word … and it helps a bit
+Two model variants:
+1. Skip-grams (SG)
+  Predict context (“outside”) words (position independent) given center word
+2. Continuous Bag of Words (CBOW)
+  Predict center word from (bag of) context words
+We presented: Skip-gram model
+ 
+Loss functions for training:
+1. Naïve softmax (simple but expensive loss function, when many output classes)
+2. More optimized variants like hierarchical softmax
+3. Negative sampling
+So far, we explained naïve softmax
+32
+===== PAGE 26 =====
+The skip-gram model with negative sampling 
+• The normalization term is computationally expensive (when many output classes):
+• 𝑃 𝑜 𝑐 = exp(𝑢𝑜𝑇𝑣𝑐)
+σ𝑤∈𝑉 exp(𝑢𝑤𝑇 𝑣𝑐)
+• Hence, standard word2vec implements the skip -gram model with negative sampling
+• Main idea: train binary logistic regressions to differentiate a true pair (center word and 
+a word in its context window) versus several “noise” pairs (the center word paired with 
+a random word)
+33
+A big sum over words
+===== PAGE 27 =====
+The skip-gram model with negative sampling ( Mikolov et al. 2013)
+• We take k negative samples (using word probabilities)
+• Maximize probability that real outside word appears; 
+minimize probability that random words appear around center word
+• Using notation consistent with this class, we minimize:
+𝐽𝑛𝑒𝑔−𝑠𝑎𝑚𝑝𝑙𝑒 𝒖𝑜, 𝒗𝑐, 𝑈 = −  log 𝜎 𝒖𝑜𝑇𝒗𝑐 − ෍
+𝑘∈ 𝐾 𝑠𝑎𝑚𝑝𝑙𝑒𝑑 𝑖𝑛𝑑𝑖𝑐𝑒𝑠
+log 𝜎 −𝒖𝑘
+𝑇𝒗𝑐  
+• The logistic/sigmoid function: 
+(we’ll become good friends soon ☺)
+• Sample with P(w)=U(w)3/4/Z, the unigram distribution U(w) raised to the 3/4 power
+• The power makes less frequent words be sampled more often
+34
+𝜎 𝑥 = 1
+1 + 𝑒−𝑥
+sigmoid rather than softmax 
+
+===== PAGE 28 =====
+Stochastic gradients with negative sampling [aside]
+• We iteratively take gradients at each window for SGD
+• In each window, we only have at most 2 m + 1 words plus 2km negative 
+words with negative sampling, so ∇𝜃𝐽𝑡(𝜃) is very sparse!
+35
+===== PAGE 29 =====
+Stochastic gradients with negative sampling [aside]
+• We might only update the word vectors that actually appear!
+• Solution: either you need sparse matrix update operations to 
+only update certain rows of full embedding matrices U and V, 
+or you need to keep around a hash for word vectors
+• If you have millions of word vectors and do distributed 
+computing, it is important to not have to send gigantic 
+updates around!
+[            ]|V|
+d
+36
+Rows not columns 
+in actual DL 
+packages!
+
+===== PAGE 30 =====
+5. Why not capture co-occurrence counts directly?
+37
+There’s something weird about iterating through the whole corpus (perhaps many times); 
+why don’t we just accumulate all the statistics of what words appear near each other?!?
+Building a co-occurrence matrix X
+• 2 options: windows vs. full document 
+• Window: Similar to word2vec, use window around each word → captures some 
+syntactic and semantic information (“word space”)
+• Word-document co-occurrence matrix will give general topics (all sports terms will 
+have similar entries) leading to “Latent Semantic Analysis” (“document space”)
+===== PAGE 31 =====
+Example: Window based co-occurrence matrix
+38
+• Window length 1 (more common: 5 –10)
+• Symmetric (irrelevant whether left or right context)
+• Example corpus: 
+• I like deep learning
+• I like NLP
+• I enjoy flying
+counts I like enjoy deep learning NLP flying .
+I 0 2 1 0 0 0 0 0
+like 2 0 0 1 0 1 0 0
+enjoy 1 0 0 0 0 0 1 0
+deep 0 1 0 0 1 0 0 0
+learning 0 0 0 1 0 0 0 1
+NLP 0 1 0 0 0 0 0 1
+flying 0 0 1 0 0 0 0 1
+. 0 0 0 0 1 1 1 0
+===== PAGE 32 =====
+Co-occurrence vectors
+39
+• Simple count co-occurrence vectors
+• Vectors increase in size with vocabulary
+• Very high dimensional: require a lot of storage (though sparse)
+• Subsequent classification models have sparsity issues → Models are less robust
+• Low-dimensional vectors
+• Idea: store “most” of the important information in a fixed, small number of 
+dimensions: a dense vector
+• Usually 25–1000 dimensions, similar to word2vec
+• How to reduce the dimensionality?
+===== PAGE 33 =====
+Classic Method: Dimensionality Reduction on X (HW1)
+40
+Singular Value Decomposition of co -occurrence matrix X
+Factorizes X into UΣVT, where U and V are orthonormal (unit vectors and orthogonal)
+ 
+Retain only k singular values, in order to generalize.
+෠𝑋 is the best rank k approximation to X , in terms of least squares. 
+Classic linear algebra result. Expensive to compute for large matrices.
+kX
+===== PAGE 34 =====
+Hacks to X 
+41
+• Running an SVD on raw counts doesn’t work well!!!
+• Scaling the counts in the cells can help a lot
+• Problem: function words (the, he, has) are too frequent → syntax has too much 
+impact. Some fixes: 
+• log the frequencies
+• min(X, t), with t ≈ 100
+• Ignore the function words
+• Ramped windows that count closer words more than further away words
+• Use correlations instead of counts, then set negative values to 0
+• Etc.
+===== PAGE 35 =====
+Interesting semantic patterns emerge in the scaled vectors
+42
+COALS model from
+Rohde et al. ms., 2005. An Improved Model of Semantic Similarity Based on Lexical Co-Occurrence 
+
+===== PAGE 36 =====
+GloVe [Pennington, Socher, and Manning, EMNLP 2014]:
+Encoding meaning components in vector differences
+Q: How can we capture ratios of co-occurrence probabilities as 
+linear meaning components in a word vector space?
+===== PAGE 37 =====
+A: Log-bilinear model:
+with vector differences
+GloVe [Pennington, Socher, and Manning, EMNLP 2014]:
+Encoding meaning components in vector differences
+Q: How can we capture ratios of co-occurrence probabilities as 
+linear meaning components in a word vector space?
+•  Fast training
+•  Scalable to huge corpora 
+Loss:
+===== PAGE 38 =====
+6. How to evaluate word vectors?
+• Related to general evaluation in NLP: Intrinsic vs. extrinsic
+• Intrinsic:
+• Evaluation on a specific/intermediate subtask
+• Fast to compute
+• Helps to understand that system
+• Not clear if it’s helpful unless correlation to real task is established
+• Extrinsic:
+• Evaluation on a real task
+• Can take a long time to compute accuracy
+• Unclear if the subsystem is the problem or its interaction or other subsystems
+• If replacing exactly one subsystem with another improves accuracy → Winning!
+45
+===== PAGE 39 =====
+Intrinsic word vector evaluation
+• Word Vector Analogies
+• Evaluate word vectors by how well their cosine 
+distance after addition captures intuitive 
+semantic and syntactic analogy questions
+• Discarding the input words from the search (!)
+• Problem: What if the information is there but 
+not linear?
+man:woman :: king:?
+a:b :: c:?
+king
+man
+woman
+46
+===== PAGE 40 =====
+GloVe Visualization
+47
+===== PAGE 41 =====
+Meaning similarity: Another intrinsic word vector evaluation
+• Word vector distances and their correlation with human judgments
+• Example dataset: WordSim353 
+http://www.cs.technion.ac.il/~gabr/resources/data/wordsim353/
+48
+Word 1 Word 2 Human (mean)
+tiger cat 7.35
+tiger tiger 10
+book paper 7.46
+computer internet 7.58
+plane car 5.77
+professor doctor 6.62
+stock phone 1.62
+stock CD 1.31
+stock jaguar 0.92
+===== PAGE 42 =====
+Correlation evaluation
+• Word vector distances and their correlation with human judgments
+49
+===== PAGE 43 =====
+Extrinsic word vector evaluation
+• One example where good word vectors should help directly: named entity 
+recognition: identifying references to a person, organization or location:  
+Chris Manning lives in Palo Alto.
+50
+===== PAGE 44 =====
+Lecture Plan
+51
+Lecture 2: Word Vectors
+1. Course organization (3 mins)
+2. Word2vec introduction (15 mins)
+3. Word2vec objective function gradients (25 mins)
+4. Optimization basics (5 mins)
+5. Can we capture the essence of word meaning more effectively by counting? (10m)
+6. Evaluating word vectors (10 mins)
+Key Goal: understand word meaning can be represented by a high -dimensional vector of 
+real numbers and can read word embeddings papers by the end of class
