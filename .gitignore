@@ -9,3 +9,4 @@ __pycache__/
 # ---- 系统垃圾 ----
 __MACOSX/
 .DS_Store
+*.log
