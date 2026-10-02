@@ -1,0 +1,28 @@
+[corpus] 7540 tokens | V=69 | D=32 | pairs/epoch=22000 | total_updates=110000
+  step   11000 / 110000 | lr=0.0225 | avg_loss=3.2664
+  step   22000 / 110000 | lr=0.0200 | avg_loss=2.3838
+  step   33000 / 110000 | lr=0.0175 | avg_loss=2.0589
+  step   44000 / 110000 | lr=0.0150 | avg_loss=1.8634
+  step   55000 / 110000 | lr=0.0126 | avg_loss=1.7694
+  step   66000 / 110000 | lr=0.0101 | avg_loss=1.7189
+  step   77000 / 110000 | lr=0.0076 | avg_loss=1.6940
+  step   88000 / 110000 | lr=0.0051 | avg_loss=1.6840
+  step   99000 / 110000 | lr=0.0026 | avg_loss=1.6630
+  step  110000 / 110000 | lr=0.0001 | avg_loss=1.6539
+
+[cost per update]
+  NEG (this impl) : (1+K)*D = 192 mult-add
+  full softmax    : V*D     = 2208 mult-add   (本例 V=69)
+  if V=100000     : 3200000 vs 192 -> ~16667x
+
+[most_similar]  (using W_in)
+      king -> [('queen', 0.999), ('prince', 0.999), ('princess', 0.999), ('boy', 0.919), ('woman', 0.918)]
+     queen -> [('king', 0.999), ('prince', 0.999), ('princess', 0.999), ('boy', 0.923), ('woman', 0.921)]
+       man -> [('woman', 1.0), ('boy', 0.999), ('girl', 0.999), ('prince', 0.919), ('queen', 0.919)]
+     paris -> [('beijing', 0.999), ('tokyo', 0.999), ('girl', 0.903), ('woman', 0.899), ('boy', 0.898)]
+
+[analogy]
+  king   - man   + woman = ?  -> [('queen', 0.999), ('prince', 0.999), ('princess', 0.998)]
+  queen  - woman + man   = ?  -> [('king', 0.999), ('prince', 0.999), ('princess', 0.999)]
+  paris  - france+ japan = ?  -> [('beijing', 0.999), ('tokyo', 0.999), ('girl', 0.908)]
+  tokyo  - japan + china = ?  -> [('beijing', 0.999), ('paris', 0.999), ('girl', 0.912)]

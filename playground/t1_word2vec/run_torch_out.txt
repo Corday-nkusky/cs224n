@@ -1,0 +1,21 @@
+[device] cuda | torch 2.6.0+cu124
+[corpus] V=69 | pairs=22000 | batch=512
+  batch   86/860 | lr=5.7025 | loss=2.8659
+  batch  172/860 | lr=5.1075 | loss=1.9885
+  batch  258/860 | lr=4.5125 | loss=1.7712
+  batch  344/860 | lr=3.9175 | loss=1.6695
+  batch  430/860 | lr=3.3225 | loss=1.6256
+  batch  516/860 | lr=2.7275 | loss=1.5993
+  batch  602/860 | lr=2.1325 | loss=1.5823
+  batch  688/860 | lr=1.5375 | loss=1.5802
+  batch  774/860 | lr=0.9425 | loss=1.5729
+  batch  860/860 | lr=0.3475 | loss=1.5677
+
+[most_similar]
+    king -> [('prince', 1.0), ('queen', 0.999), ('princess', 0.999)]
+   paris -> [('beijing', 1.0), ('tokyo', 0.999), ('capital', 0.857)]
+[analogy]
+  king - man + woman    = [('prince', 0.999), ('queen', 0.999), ('princess', 0.999)]
+  tokyo - japan + china = [('beijing', 0.999), ('paris', 0.999), ('capital', 0.847)]
+
+[sparse+Adam] RuntimeError: Adam does not support sparse gradients, please consider SparseAdam instead
