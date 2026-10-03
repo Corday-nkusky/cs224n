@@ -21,15 +21,17 @@
 
 ## 任务清单
 
-1. （0.5h）Lec3 slides 精读（backprop 计算图部分逐页看）
+1. （0.5h）Lec3 slides 精读（backprop 计算图部分逐页看）—— 中文精讲见 `06_讲义精讲/K02_神经网络与反向传播/` 六篇
 2. （1h）**先在纸上完成 A2 的推导，再写代码**——顺序反了 A2 会退化成"调包"
-3. （8–12h）A2 编码：**transition-based 依存句法分析器** —— 先 `parser_transitions.py` 的转移系统自测，再 `parser_model.py` 的 `forward()`，最后 `run.py` 训练
-4. （1h）Lec4 slides（RNN/LM 部分）—— **RNN 只在这里出现，A2 作业里没有**
+3. （8–12h）A2 编码：**transition-based 依存句法分析器** —— 先 `parser_transitions.py` 的转移系统自测（`part_c`/`part_d`），再 `parser_model.py` 的 `forward()`（`--embedding`/`--forward`），最后 `run.py` 训练（先 `-d` 再全量）。**上手走 `07_伴学/03_A2反向传播上手指引.md` 的四级桥**（转移系统手走 → 循环口述 → PyTorch 微热身 → 三块代码填一格验一格）
+4. （1h）Lec4 slides（RNN/LM 部分）—— **RNN 只在这里出现，A2 作业里没有**；中文精讲见 `06_讲义精讲/K03_*/`（K03 待交付）
 5. （1h）回答 A2/A4/A5 的口头版，写到本文档自答区
 
 ## 材料清单
 
 - `01_Lectures/cs224n-2026-lecture03-neuralnets.pdf`（精读）
+- `06_讲义精讲/K02_神经网络与反向传播/`（六篇中文精讲 + `code/k02_demo.py` + logs）
+- `07_伴学/03_A2反向传播上手指引.md`：从 K02 概念到 A2 三块代码的四级桥（读 02 后觉得 gap 大就先走它）
 - `01_Lectures/cs224n-2026-lecture04-rnnlm.pdf`
 - `02_Assignments/a2/a2/`（工作目录）+ `_packages/a2_handout.pdf`
 - 遇到矩阵求导卡壳：CS231n 的 vector calculus notes（我会按需写进 `04_Notes/`）

@@ -56,7 +56,7 @@ A1 的本体是**两条路线的对照体验**：Part 1 用计数法（共现矩
 - **`playground/t1_word2vec/`**：两个可跑的参考实现 + 运行输出。**这是生成的学习资料，不是练习** —— 用法见该目录 README 的使用纪律
 - `02_Assignments/a1/student/`（工作目录，作业本体就是一个 notebook）
 
-**环境【实测，2026-10-02 `pytorch_env`】**：numpy 2.1.2 / scipy 1.15.3 / sklearn 1.7.2 / matplotlib 3.10.0 / torch 2.6.0+cu124 / notebook 7.4.4 / datasets 4.4.2 / **gensim 4.4.0** 齐全；IMDB 已缓存。Part 2 的 GloVe（约 250MB）尚未下载，见本文顶部第二关。
+**环境【实测，2026-10-02 `pytorch_env`】**：numpy 2.2.6 / scipy 1.15.3 / sklearn 1.7.2 / matplotlib 3.10.0 / torch 2.6.0+cu124 / notebook 7.4.4 / datasets 4.4.2 / **gensim 4.4.0** 齐全；IMDB 已缓存。Part 2 的 GloVe（约 250MB）尚未下载，见本文顶部第二关。
 
 ## 常见坑
 

@@ -60,7 +60,7 @@ W_out[neg] -= lr * outer(σ(s_neg), v_c)
 | 路线 | 解释器 | 依赖 | 状态 |
 |---|---|---|---|
 | A · 纯 numpy | `D:/code/anaconda/python.exe`（3.13.5） | numpy 2.1.3 | ✅ 实测跑通 |
-| B · PyTorch | `D:/code/anaconda/envs/pytorch_env/python.exe`（3.10.18） | torch 2.6.0+cu124, numpy 2.1.2 | ✅ 实测跑通（CUDA 可用；版本为 2026-10-02 重测值） |
+| B · PyTorch | `D:/code/anaconda/envs/pytorch_env/python.exe`（3.10.18） | torch 2.6.0+cu124, numpy 2.2.6 | ✅ 实测跑通（CUDA 可用；版本为 2026-10-02 复测值） |
 | C · gensim | `D:/code/anaconda/envs/pytorch_env/python.exe` | gensim 4.4.0 | ✅ **2026-10-02 已装**（用户级 user-site，导入已验证；base 仍没有） |
 
 > ⚠️ 注意：本机 anaconda 的 **base 环境没有 torch**，torch 在 `envs/pytorch_env` 里。

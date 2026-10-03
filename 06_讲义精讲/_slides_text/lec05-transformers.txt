@@ -1,0 +1,1180 @@
+﻿===== PAGE 1 =====
+Natural Language Processing
+with Deep Learning
+CS224N/Ling284
+Diyi Yang
+Lecture 5: Attention and Transformers
+===== PAGE 2 =====
+Lecture Plan
+Lecture 5: Attention and Transformers
+1. Vanishing gradients (10 mins) 
+2. Machine translation (10 mins) 
+3. From recurrence (RNN) to attention-based models (15 mins)
+4. Self-attention (15 mins)
+5. The Transformer model (15 mins)
+6. Great results with Transformers and their drawbacks and variants (5 mins)
+Waitlist update; assignment 2 due on Jan 22; course project session next Thur
+2
+===== PAGE 3 =====
+1. Problems with RNNs: Vanishing and Exploding Gradients
+3
+
+===== PAGE 4 =====
+Vanishing gradient intuition
+4
+?
+===== PAGE 5 =====
+Vanishing gradient intuition
+chain rule!
+5
+===== PAGE 6 =====
+Vanishing gradient intuition
+chain rule!
+6
+===== PAGE 7 =====
+Vanishing gradient intuition
+chain rule!
+7
+===== PAGE 8 =====
+Vanishing gradient intuition
+What happens if these are small?
+Vanishing gradient problem: 
+When these are small, the gradient 
+signal gets smaller and smaller as it 
+backpropagates further
+Source: “On the difficulty of training recurrent neural networks”, Pascanu et al, 2013. http://proceedings.mlr.press/v28/pascanu13.pdf
+(and supplemental materials), at http://proceedings.mlr.press/v28/pascanu13-supp.pdf
+===== PAGE 9 =====
+Why is vanishing gradient a problem?
+Gradient signal from far away is lost because it’s much smaller than gradient signal from close-by.
+So, model weights are updated only with respect to near effects, not long-term effects.
+9
+===== PAGE 10 =====
+Effect of vanishing gradient on RNN -LM
+• LM task: When she tried to print her tickets, she found that the printer was out of toner. 
+She went to the stationery store to buy more toner. It was very overpriced. After 
+installing the toner into the printer, she finally printed her ________
+• To learn from this training example, the RNN -LM needs to model the dependency 
+between “tickets” on the 7th step and the target word “tickets” at the end.
+• But if the gradient is small, the model can’t learn this dependency
+• So, the model is unable to predict similar long-distance dependencies at test time
+10
+===== PAGE 11 =====
+Why is exploding gradient a problem?
+• If the gradient becomes too big, then the SGD update step becomes too big:
+• This can cause bad updates: we take too large a step and reach a weird and bad 
+parameter configuration (with large loss)
+• You think you’ve found a hill to climb, but suddenly you’re in Iowa
+• In the worst case, this will result in Inf or NaN in your network 
+(then you have to restart training from an earlier checkpoint)
+11
+learning rate
+gradient
+===== PAGE 12 =====
+Gradient clipping: solution for exploding gradient
+12
+• Gradient clipping: if the norm of the gradient is greater than some threshold, scale it 
+down before applying SGD update
+• Intuition: take a step in the same direction, but a smaller step
+• In practice, remembering to clip gradients is important , but exploding gradients are an 
+easy problem to solve
+Source: “On the difficulty of training recurrent neural networks” , Pascanu et al, 2013. http://proceedings.mlr .press/v28/pascanu13.pdf
+
+===== PAGE 13 =====
+How to fix the vanishing gradient problem?
+• The main problem is that it’s too difficult for the RNN to learn to preserve information 
+over many timesteps.
+• In a vanilla RNN, the hidden state is constantly being rewritten
+• First: How about an RNN with separate and explicit memory which is added to?
+• Long Short-Term Memory (LSTM) [link]
+• And then: Creating more direct and linear pass -through connections in model
+• Attention, residual connections, etc.
+13
+===== PAGE 14 =====
+2. Machine Translation
+14
+Machine Translation (MT) is the task of translating a sentence x from one language (the 
+source language) to a sentence y in another language (the target language).
+x: I like deep learning 
+y: 我喜欢深度学习
+===== PAGE 15 =====
+NMT: the first big success story of NLP Deep Learning
+15
+Neural Machine Translation went from a fringe research attempt in 2014 to the leading 
+standard method in 2016
+• 2014: First seq2seq paper published [Sutskever et al. 2014]
+• 2016: Google Translate switches from SMT to NMT – and by 2018 everyone has
+• This is amazing!
+• SMT systems, built by hundreds of engineers over many years, outperformed by 
+NMT systems trained by small groups of engineers in a few months
+
+===== PAGE 16 =====
+Encoder RNN
+Neural Machine Translation (NMT)
+<START>
+Source sentence (input)
+il      m’ a entarté
+The sequence-to-sequence model
+Target sentence (output)
+Decoder RNN
+Encoder RNN produces 
+an encoding of the 
+source sentence.
+Encoding of the source sentence.
+Provides initial hidden state 
+for Decoder RNN.
+Decoder RNN is a Language Model that generates 
+target sentence, conditioned on encoding.
+heargmax
+he argmax
+hit
+hit argmax
+me
+Note: This diagram shows test time behavior: decoder 
+output is fed in          as next step’s input
+with     a        pie    <END>
+me       with    a       pieargmax
+argmax
+argmax
+argmax
+16
+===== PAGE 17 =====
+Sequence-to-sequence is versatile!
+• The general notion here is an encoder-decoder model
+• One neural network takes input and produces a neural representation
+• Another network produces output based on that neural representation
+• If the input and output are sequences, we call it a seq2seq model
+• Sequence-to-sequence is useful for more than just MT
+• Many NLP tasks can be phrased as sequence -to-sequence:
+• Summarization (long text → short text)
+• Dialogue (previous utterances → next utterance)
+• Parsing (input text → output parse as sequence)
+• Code generation (natural language → Python code)
+17
+===== PAGE 18 =====
+Neural Machine Translation (NMT)
+• The sequence-to-sequence model is an example of a Conditional Language Model
+• Language Model because the decoder is predicting the next word of the target sentence y
+• Conditional because its predictions are also conditioned on the source sentence x
+• NMT directly calculates            :
+• Question: How to train an NMT system?
+• (Easy) Answer: Get a big parallel corpus…
+• But there is now exciting work on “unsupervised NMT”, data augmentation, etc.
+Probability of next target word, given 
+target words so far and source sentence x
+18
+===== PAGE 19 =====
+Training a Neural Machine Translation system
+Encoder RNN
+Source sentence (from corpus)
+<START>    he        hit         me      with         a         pieil           m’         a      entarté
+Target sentence (from corpus)
+Seq2seq is optimized as a single system. Backpropagation operates “end-to-end”. Decoder RNN
+ො𝑦1 ො𝑦2 ො𝑦3 ො𝑦4 ො𝑦5 ො𝑦6 ො𝑦7
+𝐽1 𝐽2 𝐽3 𝐽4 𝐽5 𝐽6 𝐽7 
+= negative log 
+prob of “he”
+𝐽 = 1
+𝑇 ෍
+𝑡=1
+𝑇
+𝐽𝑡 =                 +          +         +         +          +         +
+= negative log 
+prob of <END>
+= negative log 
+prob of “with”
+19
+===== PAGE 20 =====
+Multi-layer deep encoder-decoder machine translation net
+Die       Proteste    waren    am  Wochenende eskaliert <EOS>      The       protests    escalated    over          the     weekend
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.4
+-0.6
+0.2
+-0.3
+0.4
+0.2
+-0.3
+-0.1
+-0.4
+0.2
+0.2
+0.4
+0.1
+-0.5
+-0.2
+0.4
+-0.2
+-0.3
+-0.4
+-0.2
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+-0.1
+0.3
+-0.1
+-0.7
+0.1
+-0.2
+0.6
+0.1
+0.3
+0.1
+-0.4
+0.5
+-0.5
+0.4
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.2
+-0.2
+-0.1
+0.1
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.1
+0.3
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+-0.4
+0.1
+0.2
+-0.8
+-0.1
+-0.5
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+-0.4
+0.6
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+0.3
+0.1
+-0.1
+0.6
+-0.1
+0.3
+0.1
+0.2
+0.4
+-0.1
+0.2
+0.1
+0.3
+0.6
+-0.1
+-0.5
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.2
+-0.1
+-0.1
+-0.7
+0.1
+0.1
+0.3
+0.1
+-0.4
+0.2
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.4
+0.4
+0.3
+-0.2
+-0.3
+0.5
+0.5
+0.9
+-0.3
+-0.2
+0.2
+0.6
+-0.1
+-0.5
+0.1
+-0.1
+0.6
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+0.3
+0.6
+-0.1
+-0.7
+0.1
+0.4
+0.4
+-0.1
+-0.7
+0.1
+-0.2
+0.6
+-0.1
+-0.7
+0.1
+-0.4
+0.6
+-0.1
+-0.7
+0.1
+-0.3
+0.5
+-0.1
+-0.7
+0.1
+0.2
+0.6
+-0.1
+-0.7
+0.1
+The      protests  escalated    over         the      weekend   <EOS>
+Encoder:
+Builds up 
+sentence 
+meaning 
+Source 
+sentence
+Translation 
+generated
+Feeding in 
+last word
+Decoder
+Conditioning =
+Bottleneck
+[Sutskever et al. 2014; Luong et al. 2015] The hidden states from RNN layer i 
+are the inputs to RNN layer i+1
+20
+===== PAGE 21 =====
+The final piece: the bottleneck problem in RNNs
+Encoder RNN
+Source sentence (input)
+<START>    he        hit        me       with        a         pieil           a         m’      entarté
+he        hit        me       with        a          pie    <END>
+Decoder RNN
+Target sentence (output)
+Problems with this architecture?
+Encoding of the 
+source sentence. 
+21
+===== PAGE 22 =====
+3. Attention
+• Attention provides a solution to the bottleneck problem.
+• Core idea: on each step of the decoder, use direct connection to the encoder  to focus 
+on a particular part of the source sequence
+• First, we will show via diagram (no equations), then we will show with equations
+22
+===== PAGE 23 =====
+The starting point: mean-pooling for RNNs
+23
+• Starting point: a very basic way of ‘passing information from the encoder’ is to average
+the movie a lotoverall I enjoyed
+positive
+Sentence 
+encoding
+How to compute 
+sentence encoding?
+Usually better: 
+Take element-wise 
+max or mean of all 
+hidden states
+===== PAGE 24 =====
+Attention is weighted averaging, which lets you do lookups!
+24
+Attention is just a weighted average – this is very powerful if the weights are learned!
+In a lookup table, we have a table of keys 
+that map to values. The query matches 
+one of the keys, returning its value.
+In attention, the query matches all keys softly, 
+to a weight between 0 and 1. The keys’ values 
+are multiplied by the weights and summed.
+===== PAGE 25 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+dot product
+25
+Core idea: on each step of the decoder, use direct connection to the encoder  to focus on a 
+particular part of the source sequence
+===== PAGE 26 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+dot product
+26
+===== PAGE 27 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+dot product
+27
+===== PAGE 28 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+dot product
+28
+===== PAGE 29 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+On this decoder timestep, we’re 
+mostly focusing on the first 
+encoder hidden state (”he”)
+Attention 
+distribution Take softmax to turn the scores 
+into a probability distribution
+29
+===== PAGE 30 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+distribution
+Attention 
+scores
+Attention 
+output
+Use the attention distribution to take a 
+weighted sum of the encoder hidden states.
+The attention output mostly contains 
+information from the hidden states that 
+received high attention.
+30
+===== PAGE 31 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+distribution
+Attention 
+scores
+Attention 
+output
+Concatenate attention output 
+with decoder hidden state, then 
+use to compute ො𝑦1 as before
+ො𝑦1 
+he
+31
+===== PAGE 32 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+he
+Attention 
+distribution
+Attention 
+output
+ො𝑦2 
+hit
+32
+Sometimes we take the 
+attention output from the 
+previous step, and also 
+feed it into the decoder 
+(along with the usual 
+decoder input). 
+===== PAGE 33 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+Attention 
+distribution
+Attention 
+output
+he hit
+ො𝑦3 
+me
+33
+===== PAGE 34 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+Attention 
+distribution
+Attention 
+output
+he hit me
+ො𝑦4 
+with
+34
+===== PAGE 35 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+Attention 
+distribution
+Attention 
+output
+he hit with
+ො𝑦5 
+a
+me
+35
+===== PAGE 36 =====
+Sequence-to-sequence with attention
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Decoder RNN
+Attention 
+scores
+Attention 
+distribution
+Attention 
+output
+he hit me with a
+ො𝑦6 
+pie
+36
+===== PAGE 37 =====
+Attention is great!
+• Attention significantly improves NMT performance
+• It’s very useful to allow decoder to focus on certain parts of the source
+• Attention provides a more “human-like” model of the MT process
+• You can look back at the source sentence while translating, rather than needing to remember it all
+• Attention solves the bottleneck problem
+• Attention allows decoder to look directly at source; bypass bottleneck
+• Attention helps with the vanishing gradient problem
+• Provides shortcut to faraway states
+• Attention provides some interpretability
+• By inspecting attention distribution, we see what the decoder was focusing on
+• We get (soft) alignment for free!
+• The network just learned alignment by itself
+• (One issue – attention has quadratic cost with respect to sequence length)
+37
+he
+hit
+me
+with
+a
+pie
+il
+a
+m’
+entarté
+
+===== PAGE 38 =====
+Attention is a general Deep Learning technique
+• We’ve seen that attention is a great way to improve the sequence -to-sequence model 
+for Machine Translation.
+• However: You can use attention in many architectures 
+(not just seq2seq) and many tasks (not just MT)
+• More general definition of attention :
+• Given a set of vector values, and a vector query, attention is a technique to compute 
+a weighted sum of the values, dependent on the query.
+• We sometimes say that the query attends to the values.
+• For example, in the seq2seq + attention model, each decoder hidden state (query) 
+attends to all the encoder hidden states (values).
+38
+===== PAGE 39 =====
+4. Do we even need recurrence at all? 
+40
+• Abstractly: Attention is a way to pass information from a sequence ( 𝑥) to a neural 
+network input. (ℎ𝑡)
+• This is also exactly what RNNs are used for – to pass information!
+• Can we just get rid of the RNN entirely? Maybe attention is just a better way to pass 
+information!
+2014-2017ish 
+Recurrence
+Lots of trial 
+and error
+2021
+??????
+
+===== PAGE 40 =====
+The building block we need: self attention
+41
+• What we talked about – Cross attention: paying attention to the input x to generate 𝑦𝑡
+Encoder 
+RNN
+Source sentence (input)
+<START>il           a         m’      entarté
+Attention 
+scores
+Attention 
+distribution
+Attention 
+output
+he hit me
+ො𝑦4 
+wit
+h
+• What we need – Self attention: to generate 𝑦𝑡, we need to pay attention to 𝑦<𝑡
+===== PAGE 41 =====
+Self-Attention Hypothetical Example
+42
+===== PAGE 42 =====
+Self-Attention: keys, queries, values from the same sequence
+43
+Let 𝒘1:𝑛 be a sequence of words in vocabulary 𝑉, like Zuko made his uncle tea.
+For each 𝒘𝑖 , let 𝒙𝑖 = 𝐸𝒘𝒊, where 𝐸 ∈ ℝ𝑑×|𝑉| is an embedding matrix.
+1. Transform each word embedding with weight matrices Q, K, V , each in ℝ𝑑×𝑑
+2. Compute pairwise similarities between keys and queries; normalize with softmax
+𝒆𝑖𝑗 = 𝒒𝒊
+⊤𝒌𝒋 𝜶𝑖𝑗 = exp(𝒆𝑖𝑗) 
+σ𝑗′ exp(𝒆𝑖𝑗′)
+3. Compute output for each word as weighted sum of values
+𝒒𝑖 = 𝑄𝒙𝒊 (queries) 𝒌𝑖 = 𝐾𝒙𝒊 (keys) 𝒗𝑖 = 𝑉𝒙𝒊 (values)
+𝒐𝑖 = ෍
+𝒋
+𝜶𝑖𝑗 𝒗𝒋
+===== PAGE 43 =====
+Barriers
+• Doesn’t have an inherent 
+notion of order! 
+Barriers and solutions for Self-Attention as a building block
+44
+Solutions
+===== PAGE 44 =====
+Fixing the first self-attention problem: sequence order
+• Since self-attention doesn’t build in order information, we need to encode the order of the 
+sentence in our keys, queries, and values.
+• Consider representing each sequence index as a vector
+𝒑𝑖 ∈ ℝ𝑑, for 𝑖 ∈ {1,2, … , 𝑛} are position vectors
+• Don’t worry about what the 𝑝𝑖 are made of yet!
+• Easy to incorporate this info into our self-attention block: just add the 𝒑𝑖 to our inputs!
+• Recall that 𝒙𝑖 is the embedding of the word at index 𝑖. The positioned embedding is:
+෥𝒙𝑖 = 𝒙𝑖 + 𝒑𝑖
+In deep self-attention 
+networks, we do this at the 
+first layer! You could 
+concatenate them as well, 
+but people mostly just add…
+45
+===== PAGE 45 =====
+• Sinusoidal position representations: concatenate sinusoidal functions of varying periods:
+• Pros:
+• Periodicity indicates that maybe “absolute position” isn’t as important
+• Maybe can extrapolate to longer sequences as periods restart!
+•  Cons:
+• Not learnable; also the extrapolation doesn’t really work!
+Position representation vectors through sinusoids 
+cos(𝑖/100002∗1/𝑑)
+𝒑𝑖 =
+sin(𝑖/100002∗1/𝑑)
+sin(𝑖/100002∗𝑑
+2/𝑑)
+cos(𝑖/100002∗𝑑
+2/𝑑)
+Image: https://timodenk.com/blog/linear-relationships-in-the-transformers-positional-encoding/
+Index in the sequence
+Dimension
+46
+===== PAGE 46 =====
+[Shaw et al., 2018]
+[Wang et al., 2019]
+• Learned absolute position representations: Let all 𝑝𝑖 be learnable parameters!
+Learn a matrix 𝒑 ∈ ℝ𝑑×𝑛, and let each 𝒑𝑖 be a column of that matrix!
+• Pros:
+• Flexibility: each position gets to be learned to fit the data
+•  Cons:
+• Definitely can’t extrapolate to indices outside 1, … , 𝑛.
+• Most systems use this!
+• Sometimes people try more flexible representations of position:
+• Relative linear position attention [Shaw et al., 2018]
+• Dependency syntax-based position [Wang et al., 2019]
+Position representation vectors learned from scratch
+47
+===== PAGE 47 =====
+Barriers
+• Doesn’t have an inherent 
+notion of order! 
+• No nonlinearities for deep 
+learning! It’s all just weighted 
+averages
+Barriers and solutions for Self-Attention as a building block
+Solutions
+• Add position representations to 
+the inputs
+48
+===== PAGE 48 =====
+Adding nonlinearities in self-attention
+• Note that there are no elementwise 
+nonlinearities in self-attention; 
+stacking more self-attention layers 
+just re-averages value vectors
+(Why? Look at the notes!)
+• Easy fix: add a feed-forward network 
+to post-process each output vector.
+𝑚𝑖 = 𝑀𝐿𝑃 output𝑖  
+    =  𝑊2 ∗ ReLU 𝑊1 output𝑖 + 𝑏1 + 𝑏2
+The
+𝑤1 𝑤2
+chef
+𝑤3
+who
+𝑤𝑛
+food
+…
+self-attention
+Intuition: the FF network processes the result of attention
+FF FF FF FF
+…
+self-attention
+FF FF FF FF
+49
+===== PAGE 49 =====
+Barriers
+• Doesn’t have an inherent 
+notion of order! 
+• No nonlinearities for deep 
+learning magic! It’s all just 
+weighted averages
+• Need to ensure we don’t 
+“look at the future” when 
+predicting a sequence
+• Like in machine translation
+• Or language modeling
+Barriers and solutions for Self-Attention as a building block
+Solutions
+• Add position representations to 
+the inputs
+• Easy fix: apply the same 
+feedforward network to each self-
+attention output.
+50
+===== PAGE 50 =====
+Masking the future in self-attention
+• To use self-attention in 
+decoders, we need to ensure 
+we can’t peek at the future.
+• At every timestep, we could 
+change the set of keys and 
+queries to include only past 
+words. (Inefficient!)
+• To enable parallelization, we 
+mask out attention to future 
+words by setting attention 
+scores to −∞.
+The
+chef
+who
+[START]
+For encoding 
+these words
+We can look at these 
+(not greyed out) words
+𝑒𝑖𝑗 =  ൝𝑞𝑖
+⊤𝑘𝑗, 𝑗 ≤ 𝑖
+−∞, 𝑗 > 𝑖
+−∞
+−∞−∞
+−∞−∞ −∞
+51
+===== PAGE 51 =====
+Barriers
+• Doesn’t have an inherent 
+notion of order! 
+• No nonlinearities for deep 
+learning magic! It’s all just 
+weighted averages
+• Need to ensure we don’t 
+“look at the future” when 
+predicting a sequence
+• Like in machine translation
+• Or language modeling
+Barriers and solutions for Self-Attention as a building block
+Solutions
+• Add position representations to 
+the inputs
+• Easy fix: apply the same 
+feedforward network to each self-
+attention output.
+• Mask out the future by artificially 
+setting attention weights!
+52
+===== PAGE 52 =====
+• Self-attention:
+• the basis of the method.
+• Position representations:
+• Specify the sequence order, since self-attention is an 
+unordered function of its inputs.
+• Nonlinearities:
+• At the output of the self-attention block
+• Frequently implemented as a simple feed-forward 
+network.
+• Masking:
+• In order to parallelize operations while not looking 
+at the future.
+• Keeps information about the future from “leaking” 
+to the past.
+Necessities for a self-attention building block:
+53
+Transformer Decoder
+===== PAGE 53 =====
+5. The Transformer Decoder
+54
+• A Transformer decoder is how 
+we’ll build systems like 
+language models.
+• It’s a lot like our minimal self-
+attention architecture, but 
+with a few more components.
+• The embeddings and position 
+embeddings are identical.
+• We’ll next replace our self-
+attention with multi-head self-
+attention.
+Transformer Decoder
+
+===== PAGE 54 =====
+Recall the Self-Attention Hypothetical Example
+55
+===== PAGE 55 =====
+Hypothetical Example of Multi -Head Attention
+56
+===== PAGE 56 =====
+Sequence-Stacked form of Attention
+• Let’s look at how key-query-value attention is computed, in matrices.
+• Let 𝑋 = 𝑥1; … ; 𝑥𝑛 ∈ ℝ𝑛×𝑑 be the concatenation of input vectors.
+• First, note that 𝑋𝐾 ∈ ℝ𝑛×𝑑, 𝑋𝑄 ∈ ℝ𝑛×𝑑, 𝑋𝑉 ∈ ℝ𝑛×𝑑.
+• The output is defined as output =  softmax 𝑋𝑄 𝑋𝐾 ⊤ 𝑋𝑉 ∈∈ ℝ𝑛×𝑑.
+= 𝑋𝑄𝐾⊤ 𝑋⊤
+∈ ℝ𝑛×𝑛
+All pairs of 
+attention scores!
+output ∈ ℝ𝑛×𝑑
+=
+𝐾⊤ 𝑋⊤
+𝑋𝑄
+First, take the query-key dot 
+products in one matrix 
+multiplication: 𝑋𝑄 𝑋𝐾 ⊤
+Next, softmax, and 
+compute the weighted 
+average with another 
+matrix multiplication.
+𝑋𝑄𝐾⊤ 𝑋⊤softmax
+ 𝑋𝑉
+57
+===== PAGE 57 =====
+Multi-headed attention
+• What if we want to look in multiple places in the sentence at once?
+• For word 𝑖, self-attention “looks” where 𝑥𝑖
+⊤𝑄⊤𝐾𝑥𝑗 is high, but maybe we want to 
+focus on different 𝑗 for different reasons?
+• We’ll define multiple attention “heads” through multiple Q,K,V matrices
+• Let, 𝑄ℓ, 𝐾ℓ, 𝑉ℓ ∈ ℝ𝑑×𝑑
+ℎ, where ℎ is the number of attention heads, and ℓ ranges from 1 
+to ℎ.
+• Each attention head performs attention independently:
+• outputℓ =  softmax 𝑋𝑄ℓ𝐾ℓ
+⊤𝑋⊤ ∗ 𝑋𝑉ℓ, where  outputℓ ∈ ℝ𝑛 × 𝑑/ℎ
+• Then the outputs of all the heads are combined!
+• output = output1, … , outputℎ 𝑌, where 𝑌 ∈ ℝ𝑑×𝑑
+• Each head gets to “look” at different things, and construct value vectors differently.
+58
+===== PAGE 58 =====
+Multi-head self-attention is computationally efficient
+• Even though we compute ℎ many attention heads, it’s not really more costly.
+• We compute 𝑋𝑄 ∈ ℝ𝑛×𝑑, and then reshape to ℝ𝑛×ℎ×𝑑/ℎ. (Likewise for 𝑋𝐾, 𝑋𝑉.)  
+• Then we transpose to ℝℎ×𝑛×𝑑/ℎ; now the head axis is like a batch axis.
+• Almost everything else is identical, and the matrices are the same sizes.
+59
+𝑋𝑄
+First, take the query-key dot 
+products in one matrix 
+multiplication: 𝑋𝑄 𝑋𝐾 ⊤
+𝐾⊤ 𝑋⊤
+Next, softmax, and 
+compute the weighted 
+average with another 
+matrix multiplication.
+softmax
+ 𝑋𝑉𝑋𝑄𝐾⊤ 𝑋⊤ 𝑋𝑉
+output ∈ ℝ𝑛×𝑑
+=
+𝑃
+=
+mix
+∈ ℝ3×𝑛×𝑛
+3 sets of all pairs of 
+attention scores!𝑋𝑄𝐾⊤ 𝑋⊤
+=
+===== PAGE 59 =====
+Scaled Dot Product [Vaswani et al., 2017]
+• “Scaled Dot Product” attention aids in training.
+• When dimensionality 𝑑 becomes large, dot products between vectors tend to 
+become large.
+• Because of this, inputs to the softmax function can be large, making the 
+gradients small.
+• Instead of the self-attention function we’ve seen:
+outputℓ =  softmax 𝑋𝑄ℓ𝐾ℓ
+⊤𝑋⊤ ∗ 𝑋𝑉ℓ 
+• We divide the attention scores by 𝑑/ℎ, to stop the scores from becoming large 
+just as a function of 𝑑/ℎ (The dimensionality divided by the number of heads.)
+outputℓ =  softmax
+𝑋𝑄ℓ𝐾ℓ
+⊤𝑋⊤
+𝑑/ℎ ∗ 𝑋𝑉ℓ 
+60
+===== PAGE 60 =====
+The Transformer Decoder
+61
+• Now that we’ve replaced self-
+attention with multi-head self-
+attention, we’ll go through two 
+optimization tricks that end up 
+being :
+• Residual Connections
+• Layer Normalization
+• In most Transformer diagrams, 
+these are often written 
+together as “Add & Norm”
+Transformer Decoder
+
+===== PAGE 61 =====
+The Transformer Encoder: Residual connections [He et al., 2016]
+• Residual connections are a trick to help models train better.
+• Instead of 𝑋(𝑖) = Layer(𝑋 𝑖−1 ) (where 𝑖 represents the layer)
+• We let 𝑋(𝑖) = 𝑋(𝑖−1) +  Layer(𝑋 𝑖−1 ) (so we only have to learn “the residual” 
+from the previous layer)
+• Gradient is great through the residual
+connection; it’s 1!
+• Bias towards the identity function!
+𝑋(𝑖−1) Layer 𝑋(𝑖)
+𝑋(𝑖−1) Layer 𝑋(𝑖)+
+[no residuals] [residuals]
+[Loss landscape visualization,
+Li et al., 2018, on a ResNet]62
+===== PAGE 62 =====
+The Transformer Encoder: Layer normalization  [Ba et al., 2016]
+Xu et al., 2019
+• Layer normalization is a trick to help models train faster.
+• Idea: cut down on uninformative variation in hidden vector values by normalizing 
+to unit mean and standard deviation within each layer.
+• LayerNorm’s success may be due to its normalizing gradients [Xu et al., 2019]
+• Let 𝑥 ∈ ℝ𝑑 be an individual (word) vector in the model.
+• Let 𝜇 =
+1
+𝑑 σ𝑗=1
+𝑑 𝑥𝑗; this is the mean; 𝜇 ∈ ℝ.
+• Let 𝜎 =
+1
+𝑑  σ𝑗=1
+𝑑 𝑥𝑗 − 𝜇
+2
+; this is the variance; 𝜎 ∈ ℝ.
+• Let 𝛾 ∈ ℝ𝑑 and 𝛽 ∈ ℝ𝑑 be learned “gain” and “bias” parameters. (Can omit!)
+• Then layer normalization computes:
+output = 𝑥 − 𝜇
+𝜎 + 𝜖 ∗ 𝛾 + 𝛽
+Normalize by scalar 
+mean and variance
+Modulate by learned 
+elementwise gain and bias63
+===== PAGE 63 =====
+The Transformer Decoder
+64
+• The Transformer Decoder is a stack 
+of Transformer Decoder Blocks.
+• Each Block consists of:
+• Self-attention
+• Add & Norm
+• Feed-Forward
+• Add & Norm
+• That’s it! We’ve gone through the 
+Transformer Decoder.
+Transformer Decoder
+
+===== PAGE 64 =====
+The Transformer Encoder
+65
+• The Transformer Decoder 
+constrains to unidirectional 
+context, as for language 
+models.
+• What if we want bidirectional 
+context, like in a bidirectional 
+RNN?
+• This is the Transformer 
+Encoder. The only difference is 
+that we remove the masking 
+in the self-attention.
+Transformer Decoder
+No Masking!
+===== PAGE 65 =====
+The Transformer Encoder-Decoder
+66
+• Recall that in machine 
+translation, we processed the 
+source sentence with a 
+bidirectional model and 
+generated the target with a 
+unidirectional model.
+• For this kind of seq2seq 
+format, we often use a 
+Transformer Encoder-Decoder.
+• We use a normal Transformer 
+Encoder.
+• Our Transformer Decoder is 
+modified to perform cross-
+attention to the output of the 
+Encoder.
+===== PAGE 66 =====
+Cross-attention (details)
+• We saw that self-attention is when keys, 
+queries, and values come from the same 
+source.
+• In the decoder, we have attention that 
+looks more like what we saw last week.
+• Let ℎ1, … , ℎ𝑛 be output vectors from the 
+Transformer encoder;  𝑥𝑖 ∈ ℝ𝑑
+• Let 𝑧1, … , 𝑧𝑛 be input vectors from the 
+Transformer decoder, 𝑧𝑖 ∈ ℝ𝑑
+• Then keys and values are drawn from the 
+encoder (like a memory):
+• 𝑘𝑖 = 𝐾ℎ𝑖, 𝑣𝑖 = 𝑉ℎ𝑖.
+• And the queries are drawn from the 
+decoder, 𝑞𝑖 = 𝑄𝑧𝑖.
+67
+ℎ1, … , ℎ𝑛
+𝑧1, … , 𝑧𝑛 
+===== PAGE 67 =====
+6. Great Results with Transformers
+[Vaswani et al., 2017]
+Not just better Machine 
+Translation BLEU scores
+Also more efficient to 
+train!
+First, Machine Translation from the original Transformers paper!
+[Test sets: WMT 2014 English-German and English-French]68
+===== PAGE 68 =====
+Great Results with Transformers
+[Liu et al., 2018]; WikiSum dataset
+Transformers all the way down.
+Next, document generation! 
+The old standard
+69
+===== PAGE 69 =====
+[Shaw et al., 2018]
+[Wang et al., 2019]
+• Quadratic compute in self-attention (today):
+• Computing all pairs of interactions means our computation grows 
+quadratically with the sequence length!
+• What if the seq length 𝒏 ≥ 𝟓𝟎, 𝟎𝟎𝟎? E.g., to work on long documents
+• Position representations:
+• Are simple absolute indices the best we can do to represent position?
+• Relative linear position attention [Shaw et al., 2018]
+• Dependency syntax-based position [Wang et al., 2019]
+What would we like to fix about the Transformer?
+70
+===== PAGE 70 =====
+• As Transformers grow larger, a larger and larger percent of compute is outside 
+the self-attention portion, despite the quadratic cost.
+• In practice, almost no large Transformer language models use anything but the 
+quadratic cost attention we’ve presented here.
+• The cheaper methods tend not to work as well at scale.
+• So, is there no point in trying to design cheaper alternatives to self-attention?
+• Or would we unlock much better models with much longer contexts (>100k 
+tokens?) if we were to do it right?
+Do we even need to remove the quadratic cost of attention?
+71

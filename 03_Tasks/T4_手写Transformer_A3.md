@@ -27,8 +27,8 @@
 
 | 顺序 | 文件位置 | 填什么 | 对应 test |
 |---|---|---|---|
-| ① | `model_solution.py:64` → `MLP.forward` | GELU 前馈 + 残差维度 | `test_mlp` |
-| ② | `model_solution.py:91` → `CausalAttention.forward` | Q/K/V 投影 → 分头 → 缩放点积 → **因果 mask** → softmax → 拼头 → `W_o` | `test_attention` |
+| ① | `model_solution.py:91` → `MLP.forward` | GELU 前馈 + 残差维度 | `test_mlp` |
+| ② | `model_solution.py:64` → `CausalAttention.forward` | Q/K/V 投影 → 分头 → 缩放点积 → **因果 mask** → softmax → 拼头 → `W_o` | `test_attention` |
 | ③ | `model_solution.py:109` → `DecoderBlock.forward` | 注意力的残差 + 归一化顺序（注意是 **pre-LN 还是 post-LN**，骨架给的是哪种就照哪种，别改成你以为的） | `test_decoder_block` |
 | ④ | `model_solution.py:151` → `Transformer.forward` | embedding + 位置编码 → N×DecoderBlock → 输出投影 | `test_forward` |
 | ⑤ | `model_solution.py:161` → `Transformer.generate` | 自回归采样，注意 `context_length` 截断 | `test_generate` |
@@ -41,7 +41,8 @@
 - `02_Assignments/a3/cs224n-A3-student/` + `_packages/a3_handout.pdf`
 - `01_Lectures/cs224n-2026-lecture05-transformers.pdf`
 - 论文 *Attention Is All You Need* §3.2（缩放点积注意力那段，对照看）
-- `04_Notes/N3_transformer辨析.md`（post-LN vs pre-LN、mask 语义、KV cache）
+- `06_讲义精讲/K04_注意力与Transformer/04_原理深潜.md`（post-LN vs pre-LN、mask 语义、KV cache）
+- **上手桥**：[`07_伴学/04_A3Transformer上手指引.md`](file:///d:/code/cs224n/07_伴学/04_A3Transformer上手指引.md)（读懂讲义 → 会写的四级台阶，开工前必走；方法论 §0）
 
 ## 常见坑
 

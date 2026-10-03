@@ -1,0 +1,709 @@
+﻿===== PAGE 1 =====
+Natural Language Processing
+with Deep Learning
+CS224N/Ling284
+Diyi Yang
+Lecture 7: Post-training
+===== PAGE 2 =====
+Lecture Plan
+1. Instruction fine-tuning [15 mins]
+2. Reinforcement learning from human preferences (RLHF) [20 mins]
+3. InstructGPT and ChatGPT [5 mins]
+4. Limitation of RL and reward modeling [5 mins]
+5. Introducing Direct Preference Optimization (DPO) [25 mins]
+6. Human preference data; human vs. AI Feedback [5 mins]
+Project information comes out today! Find your team ☺ Assignment 3 due on Feb 5 th. 
+===== PAGE 3 =====
+Language models getting larger and larger 
+3
+https://www.economist.com/interactive/briefing/2022/06/11/huge-foundation-models-are-turbo-charging-ai-progress
+===== PAGE 4 =====
+Language models trained on more and more data
+4
+# tokens seen during training
+https://babylm.github.io/
+===== PAGE 5 =====
+Language models as world models?
+5
+[Microsoft Bing]
+(Also see OpenAI’s
+ChatGPT,
+Anthropic’s Claude)
+https://www.khanacademy.org/test-prep/sat/x0a8c2e5f:untitled -652
+https://github.com/features/copilot
+===== PAGE 6 =====
+Language models as multitask assistants?
+6
+How do we get from this
+to this?
+Stanford University is located in __________
+
+===== PAGE 7 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback
+7. What’s next? 
+===== PAGE 8 =====
+Language modeling ≠ assisting users
+8
+Language models are not aligned with user intent [Ouyang et al., 2022]
+Finetuning to the rescue!
+===== PAGE 9 =====
+Language modeling ≠ assisting users
+9
+Human
+A giant rocket ship blasted off from Earth carrying 
+astronauts to the moon. The astronauts landed their 
+spaceship on the moon and walked around exploring the 
+lunar surface. Then they returned safely back to Earth, 
+bringing home moon rocks to show everyone.
+Language models are not aligned with user intent [Ouyang et al., 2022]
+Finetuning to the rescue!
+===== PAGE 10 =====
+The pretraining/finetuning paradigm
+Pretraining can improve NLP applications by serving as parameter initialization.
+10
+Decoder
+(Transformer, LSTM, ++ )
+Iroh goes to make tasty tea
+goes to make tasty tea END
+Step 1: Pretrain (on language modeling)
+Lots of text; learn general things!
+Decoder
+(Transformer, LSTM, ++ )
+☺/
+Step 2: Finetune (on your task)
+Not many labels; adapt to the task!
+… the movie was … 
+===== PAGE 11 =====
+Scaling up finetuning
+Pretraining can improve NLP applications by serving as parameter initialization.
+11
+Decoder
+(Transformer, LSTM, ++ )
+Iroh goes to make tasty tea
+goes to make tasty tea END
+Step 1: Pretrain (on language modeling)
+Lots of text; learn general things!
+Decoder
+(Transformer, LSTM, ++ )
+☺/
+Step 2: Finetune (on many tasks)
+Not many labels; adapt to the tasks!
+… the movie was … 
+===== PAGE 12 =====
+Instruction finetuning
+12
+• Collect examples of (instruction, output) pairs across many tasks and finetune an LM
+[FLAN-T5; Chung et al., 2022]
+• Evaluate on unseen tasks
+===== PAGE 13 =====
+Instruction finetuning
+13
+[Wang et al., 2022]
+• As is usually the case, data + model
+scale is key for this to work!
+• Super-NaturalInstructionsdataset
+contains over 1.6K tasks,
+3M+ examples
+• Classification, sequence tagging, 
+rewriting, translation, QA...
+Q: how do we evaluate such a model?
+pretraining?
+===== PAGE 14 =====
+Aside: new benchmarks for multitask LMs
+14
+Massive Multitask Language
+Understanding (MMLU)
+[Hendrycks et al., 2021]
+New benchmarks for measuring LM
+performance on 57 diverse 
+knowledge intensive tasks
+
+===== PAGE 15 =====
+Some intuition: examples from MMLU
+
+===== PAGE 16 =====
+Progress on MMLU
+• Rapid, impressive progress on challenging knowledge -intensive benchmarks
+
+===== PAGE 17 =====
+Aside: new benchmarks for multitask LMs
+17
+BIG-Bench [Srivastava et al., 2022]
+200+ tasks, spanning:
+https://github.com/google/BIG-
+bench/blob/main/bigbench/benchmark_tasks/README.md
+===== PAGE 18 =====
+Instruction finetuning and performance gains 
+18
+• Recall the T5 encoder-decoder
+model [Raffel et al., 2018], pretrained on 
+the span corruption task
+• Flan-T5 [Chung et al., 2022]: T5 models 
+finetuned on 1.8K additional tasks
+Bigger model = bigger Δ
+BIG-bench + MMLU
+===== PAGE 19 =====
+Instruction finetuning and performance gains
+Before instruction finetuning 
+19
+===== PAGE 20 =====
+Instruction finetuning and performance gains
+After instruction finetuning 
+20
+Try FLAN-T5 out to get a sense of its capabilities: https://huggingface.co/google/flan-t5-xxl [Chung et al., 2022]
+===== PAGE 21 =====
+A huge diversity of instruction -tuning datasets
+• The release of LLaMA led to open-source attempts to `create’ instruction tuning data
+
+===== PAGE 22 =====
+What have we learned from this? 
+• Generate instructions, 
+input, and output from a 
+LM [Wang et al., 2022]
+• Alpaca: fine-tuned from 
+the LLaMA 7B model on 
+52K instruction-following 
+examples
+• You don’t need many 
+samples to instruction tune 
+(e.g., “LIMA: Less Is More for 
+Alignment” Zhou et al., 2023)
+
+===== PAGE 23 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback
+7. What’s next? 
+===== PAGE 24 =====
+musicaladventure
+Limitations of instruction finetuning?
+24
+• One limitation of instruction finetuning is obvious: it’s expensive to collect ground-truth 
+data for tasks.
+• But there are other, subtler limitations too. Can you think of any?
+• Problem 1: tasks like open-ended creative generation have no right answer.
+• Write me a story about a dog and her pet grasshopper.
+• Problem 2: language modeling penalizes all token -level mistakes equally, but some 
+errors are worse than others.
+• Even with instruction finetuning, there
+a mismatch between the LM
+objective and the objective of
+“satisfy human preferences”!
+• Can we explicitly attempt to satisfy 
+human preferences?
+LM
+Avatar is a fantasy TV show
+is a fantasy TV show END
+adventure musical
+===== PAGE 25 =====
+Optimizing for human preferences
+25
+• Let’s say we were training a language model on some task (e.g. summarization).
+• For each LM sample 𝑠, imagine we had a way to obtain a human reward of that 
+summary: 𝑅 𝑠 ∈ ℝ, higher is better.
+• Now we want to maximize the expected reward of samples from our LM:
+𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅( Ƹ𝑠)
+SAN FRANCISCO, 
+California (CNN) --
+A magnitude 4.2 
+earthquake shook the 
+San Francisco
+...
+overturn unstable
+objects.
+An earthquake hit 
+San Francisco. 
+There was minor 
+property damage, 
+but no injuries.
+The Bay Area has 
+good weather but is 
+prone to 
+earthquakes and 
+wildfires.
+𝑠1
+𝑅 𝑠1 = 8.0
+𝑠2
+𝑅 𝑠2 = 1.2
+Note: for simplicity, we show the math 
+for a single prompt. In practice, we 
+average over many prompts
+===== PAGE 26 =====
+Reinforcement learning to the rescue
+26
+• The field of reinforcement learning (RL) has studied these
+(and related) problems for many years now
+[Williams, 1992; Sutton and Barto, 1998]
+• Circa 2013: resurgence of interest in RL applied to
+deep learning, game-playing [Mnih et al., 2013]
+• But the interest in applying RL to modern LMs is an
+even newer phenomenon [ Ziegler et al., 2019;
+Stiennon et al., 2020; Ouyang et al., 2022]. Why?
+• RL w/ LMs has commonly been viewed as very hard
+to get right (still is!)
+• Newer advances in RL algorithms that work for
+large neural models, including language models
+(e.g. PPO; [Schulman et al., 2017])
+
+===== PAGE 27 =====
+Optimizing for human preferences
+27
+• How do we actually change our LM parameters 𝜃 to maximize this?
+𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅( Ƹ𝑠)
+• Let’s try doing gradient ascent!
+𝜃𝑡+1 ≔ 𝜃𝑡 + 𝛼 ∇𝜃𝑡𝔼 Ƹ𝑠~𝑝𝜃𝑡(𝑠) 𝑅( Ƹ𝑠)
+• Policy gradient methods in RL (e.g., REINFORCE; [Williams, 1992]) give us tools for 
+estimating and optimizing this objective.
+• We’ll describe a very high-level mathematical overview of the simplest policy gradient 
+estimator, but a full treatment of RL is outside the scope of this course (try CS234!)
+What if our reward 
+function is non-
+differentiable??
+How do we estimate 
+this expectation??
+===== PAGE 28 =====
+A (very!) brief introduction to policy gradient/REINFORCE [Williams, 1992]
+28
+(chain rule) This is an 
+expectation of this
+⟹ ∇𝜃 𝑝𝜃 𝑠 = 𝑝𝜃 𝑠 ∇𝜃 log 𝑝𝜃 𝑠
+(defn. of expectation) (linearity of gradient)• We want to obtain
+∇𝜃𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅( Ƹ𝑠) = ∇𝜃 ෍
+𝑠
+𝑅(𝑠)𝑝𝜃 𝑠 = ෍
+𝑠
+𝑅(𝑠) ∇𝜃𝑝𝜃 𝑠
+• Here we’ll use a very handy trick known as the log-derivative trick. Let’s try taking the 
+gradient of log 𝑝𝜃 𝑠
+∇𝜃 log 𝑝𝜃 𝑠 = 1
+𝑝𝜃 𝑠 ∇𝜃 𝑝𝜃 𝑠
+• Plug back in:
+෍
+𝑠
+𝑅 𝑠 ∇𝜃𝑝𝜃 𝑠 = ෍
+𝑠
+𝑝𝜃 𝑠 𝑅 𝑠 ∇𝜃 log 𝑝𝜃 𝑠
+= 𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅 Ƹ𝑠 ∇𝜃 log 𝑝𝜃 Ƹ𝑠
+===== PAGE 29 =====
+• Giving us the update rule:
+• Now we have put the gradient “inside” the expectation, we can approximate this 
+objective with Monte Carlo samples:
+∇𝜃𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅( Ƹ𝑠) = 𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅 Ƹ𝑠 ∇𝜃 log 𝑝𝜃 Ƹ𝑠 ≈ 1
+𝑚 ෍
+𝑖=1
+𝑚
+𝑅 𝑠𝑖 ∇𝜃 log 𝑝𝜃 𝑠𝑖
+𝜃𝑡+1≔ 𝜃𝑡 + 𝛼 1
+𝑚 ෍
+𝑖=1
+𝑚
+𝑅 𝑠𝑖 ∇𝜃𝑡 log 𝑝𝜃𝑡 𝑠𝑖
+≈ 1
+𝑚 ෍
+𝑖=1
+𝑚
+𝑅 𝑠𝑖 ∇𝜃 log 𝑝𝜃 𝑠𝑖
+29
+If 𝑅 is +++
+Take gradient steps 
+to maximize 𝑝𝜃 𝑠𝑖
+If 𝑅 is --- Take steps to 
+minimize 𝑝𝜃 𝑠𝑖
+This is why it’s called “reinforcement 
+learning”: we reinforce good actions, 
+increasing the chance they happen again.
+This is heavily simplified! There is a lot
+more needed to do RL w/ LMs. Can you 
+see any problems with this objective?
+A (very!) brief introduction to policy gradient/REINFORCE [Williams, 1992]
+= 𝔼 Ƹ𝑠~𝑝𝜃(𝑠) 𝑅 Ƹ𝑠 ∇𝜃 log 𝑝𝜃 Ƹ𝑠
+===== PAGE 30 =====
+Introducing Proximal Policy Optimization (PPO)
+• Key idea of PPO: limit how much the policy can change in each update
+• PPO (clipped) objective: 
+𝐿𝐶𝐿𝐼𝑃 𝜃 = 𝔼𝑠𝑖~𝑝𝑜𝑙𝑑
+𝜃 (𝑠)[min(𝑟𝑡 𝜃 ⋅ 𝐴 𝑠𝑖 , clip (𝑟𝑡 𝜃 , 1 − 𝜖, 1 + 𝜖) ⋅ 𝐴 𝑠𝑖 )]
+• Update rule: 𝜃𝑡+1≔ 𝜃𝑡 + 𝛼∇𝜃𝑡 𝐿𝐶𝐿𝐼𝑃 𝜃𝑡
+𝑟𝑡 𝜃 =
+𝑝𝜃 𝑠𝑖
+𝑝𝑜𝑙𝑑
+𝜃 (𝑠𝑖) is the probability ratio
+𝐴 𝑠𝑖 is the advantage, i.e., how much better than expected)
+clip range (e.g., 0.2)
+For details on algorithm, check out https:// web.stanford.edu/class/cs234/slides/lecture6post.pdf
+• Problems with vanilla REINFORCE: high variance in gradient estimates; unstable 
+training; sample inefficiency;  
+===== PAGE 31 =====
+How do we model human preferences?
+31
+• Awesome: now for any arbitrary, non-differentiable reward function 𝑅 𝑠 , we can 
+train our language model to maximize expected reward.
+• Not so fast! (Why not?)
+• Problem 1: human-in-the-loop is expensive!
+• Solution: instead of directly asking humans for preferences, model their 
+preferences as a separate (NLP) problem! [ Knox and Stone, 2009]
+An earthquake hit 
+San Francisco. 
+There was minor 
+property damage, 
+but no injuries.
+The Bay Area has 
+good weather but is 
+prone to 
+earthquakes and 
+wildfires.
+𝑠1
+𝑅 𝑠1 = 8.0
+𝑠2
+𝑅 𝑠2 = 1.2
+Train an LM 𝑅𝑀𝜙 𝑠 to 
+predict human 
+preferences from an 
+annotated dataset, then 
+optimize for 𝑅𝑀𝜙 instead.
+
+===== PAGE 32 =====
+How do we model human preferences?
+32
+• Problem 2: human judgments are noisy and miscalibrated!
+• Solution: instead of asking for direct ratings, ask for pairwise comparisons, which can 
+be more reliable [Phelps et al., 2015; Clark et al., 2018] 
+A 4.2 magnitude 
+earthquake hit
+San Francisco, 
+resulting in 
+massive damage.
+𝑠3
+𝑅 𝑠3 = ?𝑅 𝑠3 = 4.1? 6.6? 3.2?
+===== PAGE 33 =====
+How do we model human preferences?
+33
+• Problem 2: human judgments are noisy and miscalibrated!
+• Solution: instead of asking for direct ratings, ask for pairwise comparisons, which can 
+be more reliable [Phelps et al., 2015; Clark et al., 2018] 
+An earthquake hit 
+San Francisco. 
+There was minor 
+property damage, 
+but no injuries.
+The Bay Area has 
+good weather but is 
+prone to 
+earthquakes and 
+wildfires.
+𝑠1 𝑠2
+A 4.2 magnitude 
+earthquake hit
+San Francisco, 
+resulting in 
+massive damage.
+𝑠3
+> >
+Reward Model (𝑅𝑀𝜙)
+The Bay Area … ... wildfires
+1.2
+𝐽𝑅𝑀 𝜙 = −𝔼 𝑠𝑤,𝑠𝑙 ~𝐷 log 𝜎(𝑅𝑀𝜙 𝑠𝑤 − 𝑅𝑀𝜙(𝑠𝑙))
+“winning” 
+sample
+“losing” 
+sample
+𝑠𝑤 should score
+higher than 𝑠𝑙
+Bradley-Terry [1952] paired comparison model
+===== PAGE 34 =====
+Make sure your reward model works first!
+Data
+Evaluate RM on predicting outcome of held -out human judgments
+[Stiennon et al., 2020]
+Large enough RM 
+trained on enough 
+data approaching 
+single human perf
+===== PAGE 35 =====
+35
+This is a penalty which prevents us from diverging too far from the pretrained model. In 
+expectation, it is known as the Kullback-Leibler (KL) divergence between 𝑝𝜃
+𝑅𝐿(𝑠) and 𝑝𝑃𝑇 𝑠 .
+RLHF: Putting it all together [Christiano et al., 2017; Stiennon et al., 2020]
+Pay a price when 
+𝑝𝜃
+𝑅𝐿 𝑠 > 𝑝𝑃𝑇 𝑠
+• Finally, we have everything we need:
+• A pretrained (possibly instruction -finetuned) LM 𝑝𝑃𝑇(𝑠)
+• A reward model 𝑅𝑀𝜙(𝑠) that produces scalar rewards for LM outputs, trained on a 
+dataset of human comparisons
+• A method for optimizing LM parameters towards an arbitrary reward function.
+• Now to do RLHF:
+• Initialize a copy of the model 𝑝𝜃
+𝑅𝐿(𝑠) , with parameters 𝜃 we would like to optimize
+• Optimize the following reward with RL:
+𝑅 𝑠 = 𝑅𝑀𝜙(𝑠) − 𝛽 log 𝑝𝜃
+𝑅𝐿(𝑠)
+𝑝𝑃𝑇(𝑠)
+===== PAGE 36 =====
+High-level instantiation: “RLHF” pipeline
+• First step: instruction tuning!
+• Second + third steps: maximize reward (but how??)
+
+===== PAGE 37 =====
+RLHF provides gains over pretraining + finetuning
+[Stiennon et al., 2020]
+𝑝𝑃𝑇(𝑠)
+𝑝𝐼𝐹𝑇(𝑠)
+𝑝𝑅𝐿(𝑠)
+37
+===== PAGE 38 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback
+7. What’s next? 
+===== PAGE 39 =====
+InstructGPT: scaling up RLHF to tens of thousands of tasks
+[Ouyang et al., 2022]
+30k 
+tasks!
+39
+===== PAGE 40 =====
+InstructGPT: scaling up RLHF to tens of thousands of tasks
+[Ouyang et al., 2022]
+Tasks collected from labelers:
+40
+===== PAGE 41 =====
+InstructGPT
+41
+
+===== PAGE 42 =====
+InstructGPT
+42
+
+===== PAGE 43 =====
+ChatGPT: Instruction Finetuning + RLHF for dialog agents
+43
+Note: OpenAI (and similar 
+companies) are keeping 
+more details secret about 
+ChatGPT training 
+(including data, training 
+parameters, model size)—
+perhaps to keep a 
+competitive edge…
+https://openai.com/blog/chatgpt/
+(Instruction finetuning!)
+===== PAGE 44 =====
+ChatGPT: Instruction Finetuning + RLHF for dialog agents
+44
+ https://openai.com/blog/chatgpt/
+(RLHF!)
+Note: OpenAI (and similar 
+companies) are keeping 
+more details secret about 
+ChatGPT training 
+(including data, training 
+parameters, model size)—
+perhaps to keep a 
+competitive edge…
+
+===== PAGE 45 =====
+ChatGPT: Instruction Finetuning + RLHF for dialog agents
+45
+
+===== PAGE 46 =====
+Controlled comparisons of “RLHF” style algorithms
+• Many works study RLHF behaviors using GPT -4 feedback (Simulated) as a surrogate for 
+Human feedback. 
+• PPO (method in InstructGPT) does work; simple baselines (Best -of-n) works well too
+[Dubois et al 2023]
+
+===== PAGE 47 =====
+RLHF behaviors – clear stylistic changes
+• Significantly more detailed, nicer/clearer list like formatting
+
+===== PAGE 48 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback
+7. What’s next? 
+===== PAGE 49 =====
+49
+Limitations of RL + Reward Modeling
+• Human preferences are unreliable!
+• ”Reward hacking” is a common 
+problem in RL
+https://openai.com/blog/faulty-reward-functions/
+===== PAGE 50 =====
+50
+Limitations of RL + Reward Modeling
+• Human preferences are unreliable!
+• ”Reward hacking” is a common 
+problem in RL
+• Chatbots are rewarded to 
+produce responses that seem 
+authoritative and helpful, 
+regardless of truth
+• This can result in making up facts 
++ hallucinations
+https://www.npr .org/2023/02/09/1155650909/google-chatbot--error-bard-shares
+https://news.ycombinator .com/item?id=34776508
+https://apnews.com/article/kansas-city-chiefs-philadelphia-eagles-technology-
+science-82bc20f207e3e4cf81abc6a5d9e6b23a
+===== PAGE 51 =====
+𝑅 𝑠 = 𝑅𝑀𝜙(𝑠) − 𝛽 log 𝑝𝜃
+𝑅𝐿(𝑠)
+𝑝𝑃𝑇(𝑠)
+51
+Limitations of RL + Reward Modeling
+• Human preferences are unreliable!
+• ”Reward hacking” is a common 
+problem in RL
+• Chatbots are rewarded to 
+produce responses that seem 
+authoritative and helpful, 
+regardless of truth
+• This can result in making up facts 
++ hallucinations
+• Models of human preferences are 
+even more unreliable!
+Reward model over-optimization
+[Stiennon et al., 2020]
+===== PAGE 52 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback
+7. What’s next? 
+===== PAGE 53 =====
+RL (PPO) can be quite complex!!! 
+• RL optimization can be 
+computationally 
+expensive and tricky
+• Fitting a value function
+• Online sampling is slow
+• Performance can be 
+sensitive to 
+hyperparameters
+Secrets of RLHF / PPO workflow [Zheng et al., 2023]
+[Shao et al., 2024]
+===== PAGE 54 =====
+Removing the ‘RL’ from RLHF
+Recall we want to maximize the following objective in RLHF 
+𝔼 ො𝑦∼𝑝𝜃
+𝑅𝐿 ො𝑦 𝑥 [𝑅𝑀𝜙(𝑥, ො𝑦) − 𝛽 log 𝑝𝜃
+𝑅𝐿 ො𝑦|𝑥
+𝑝𝑃𝑇 ො𝑦|𝑥 ]
+There is a closed form solution to this:
+𝑝∗ ො𝑦 𝑥 = 1
+𝑍(𝑥) 𝑝𝑃𝑇 ො𝑦|𝑥 exp( 1
+𝛽 𝑅𝑀 𝑥, ො𝑦 )
+• Rearrange this via a log transformation 
+• This holds true for any arbitrary LMs, thus
+𝑅𝑀𝜃 𝑥, ො𝑦 = 𝛽 log 𝑝𝜃
+𝑅𝐿 ො𝑦|𝑥
+𝑝𝑃𝑇 ො𝑦|𝑥 + 𝛽 log 𝑍(𝑥)
+𝑅𝑀 𝑥, ො𝑦 = 𝛽 (log 𝑝∗ ො𝑦 𝑥 − log 𝑝𝑃𝑇 ො𝑦|𝑥 ) + 𝛽 log 𝑍 𝑥 = 𝛽 log 𝑝∗ ො𝑦|𝑥
+𝑝𝑃𝑇 ො𝑦|𝑥 + 𝛽 log 𝑍(𝑥)
+===== PAGE 55 =====
+Putting it together for DPO
+• Derived reward model:
+• Final DPO loss via the Bradley-Terry model of human preferences:
+𝐽𝐷𝑃𝑂 𝜃 = −𝔼 𝑥,𝑦𝑤,𝑦𝑙 ~𝐷 log 𝜎(𝑅𝑀𝜃 𝑥, 𝑦𝑤 − 𝑅𝑀𝜃(𝑥, 𝑦𝑙))
+= −𝔼 𝑥,𝑦𝑤,𝑦𝑙 ~𝐷 log 𝜎(𝛽 log
+𝑝𝜃
+𝑅𝐿 𝑦𝑤|𝑥
+𝑝𝑃𝑇 𝑦𝑤|𝑥 − 𝛽 log
+𝑝𝜃
+𝑅𝐿 𝑦𝑙|𝑥
+𝑝𝑃𝑇 𝑦𝑙|𝑥 )
+𝑅𝑀𝜃 𝑥, ො𝑦 = 𝛽 log 𝑝𝜃
+𝑅𝐿 ො𝑦|𝑥
+𝑝𝑃𝑇 ො𝑦|𝑥 + 𝛽 log 𝑍(𝑥)
+Reward for 
+winning sample
+Reward for 
+losing sample
+Log Z term 
+cancels as 
+the loss only 
+measures 
+differences 
+in rewards
+[Rafailov+ 2023]
+===== PAGE 56 =====
+DPO outperforms prior methods 
+• You can replace the complex RL part with a 
+very simple weighted MLE objective
+• Other variants (KTO, IPO) now emerging too
+• TL;DR summarization win rates vs. human -
+written summaries (GPT-4 as a judge) 
+
+===== PAGE 57 =====
+Open source RLHF is now mostly (not RL)
+• Open source LLMs now almost all just use DPO (and it works well!)
+
+===== PAGE 58 =====
+Improving the “RL” from RLHF --- GRPO 
+Shao, et al., "Deepseekmath: Pushing the limits of mathematical reasoning in open language models." arXiv:2402.03300 (2024).
+===== PAGE 59 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback
+7. What’s next? 
+===== PAGE 60 =====
+Where does the labels come from?
+• RLHF labels are often obtained from overseas, low -wage workers
+
+===== PAGE 61 =====
+Where does the label come from?
+• We also need to be quite careful about how annotator biases might creep into LMs
+‘Base’ language models 
+[Santurkar+ 2023, OpinionQA]
+===== PAGE 62 =====
+62
+User: Where are you from?  
+AI Assistant: I am from {country}
+Starling 7B Reward Model
+[Ryan et al., 2024]
+Preference tuning might produce unintended impact
+===== PAGE 63 =====
+What’s next?
+• RLHF is still a very underexplored and fast -moving area!
+• RLHF gets you further than instruction finetuning, but is (still!) data expensive.
+• Recent work aims to alleviate such data requirements:
+• RL from AI feedback [Bai et al., 2022]
+• Finetuning LMs on their own outputs
+[Huang et al., 2022; Zelikman et al., 2022]
+• However, there are still many limitations of large LMs (size, hallucination) that may 
+not be solvable with RLHF!
+63
+===== PAGE 64 =====
+Lecture Plan
+1. Instruction fine-tuning
+2. Reinforcement learning from human preferences (RLHF)
+3. InstructGPT and ChatGPT 
+4. Limitation of RL and reward modeling 
+5. Introducing Direct Preference Optimization (DPO) 
+6. Human preference data; human vs. AI Feedback

@@ -1,0 +1,1523 @@
+﻿===== PAGE 1 =====
+Natural Language Processing
+with Deep Learning
+ 
+CS224N/Ling284
+Guest Lecture: Julie Kallini
+Lecture 14: Tokenization and Multilinguality
+===== PAGE 2 =====
+Announcements
+Today is the first guest lecture. We will be taking attendance for every guest lecture, and 
+attendance is required for on-campus students.
+• If you are an online student, submit a reaction paragraph on Gradescope (due one 
+week from today).
+Project Proposal feedback is out on Gradescope, and instructions for the Project 
+Milestone are on the website now.
+• The milestone is now due on Thursday, February 26.
+Assignment 4 is due today! If you have late days, still don’t leave this assignment to the 
+last minute, since it requires querying APIs.
+2
+===== PAGE 3 =====
+Agenda for Today
+1. Tokenization approaches: Word, character/byte, and 
+subword tokenization
+2. Byte Pair Encoding (BPE): Training algorithm and 
+walkthrough
+3. Case studies: Spelling, glitch tokens, and where tokenization 
+breaks down
+4. Multilinguality: Languages of the world, cross-lingual 
+transfer, and fairness
+5. Multilingual tokenization: Why it’s important and what the 
+challenges are
+3
+===== PAGE 4 =====
+Throwback Time
+In Lecture 2, you learned about the skip-gram word2vec objective, where a model is 
+trained to predict context words given a center word:
+In Lecture 4, you were introduced to language modeling, the task of predicting what word 
+comes next:
+4
+How do we 
+split text into 
+words?
+How do we 
+decide the vocab 
+of a language 
+model?
+===== PAGE 5 =====
+What is a word?
+How many words are in this sentence?
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+5
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+17 whitespace-separated words + 2 punctuation marks
+We’d = we + had
+1 or 2 words?
+looked = look + -ed
+seems important? Milky = milk + -y
+seems important?
+===== PAGE 6 =====
+What is a word morpheme?
+A morpheme is a minimal unit of language that has meaning or a grammatical function.
+How many morphemes are in this sentence?
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+6
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+We’d = we + had
+2 morphemes
+Milky = milk + -y
+2 morphemessat = sit + -ed
+flew = fly + -ed
+still one morpheme?
+looked = look + -ed
+2 morphemes
+Milky Way is one entity
+still three morphemes?
+===== PAGE 7 =====
+Beyond words or morphemes
+7
+There are many useful ways to think about segmenting text:
+Characters: We looked at the Milky Way.
+Morphemes: We looked at the Milky Way.
+Words: We looked at the Milky Way.
+Phrases: We looked at the Milky Way.
+What would be best for a language model?
+===== PAGE 8 =====
+How do language models see text?
+8
+For a language model:
+• The fundamental units of language are tokens
+• Tokenization is the process of breaking text into tokens
+• A tokenizer translates between text and a sequence of tokens that a language model 
+(LM) learns over
+• The vocabulary      is the set of known tokens
+We looked at the Milky Way.
+(We looked at the Milky Way.)
+Tokenizer
+[2167, 10802, 540, 290, 10282, 5781, 0]
+encode
+0: .
+1: ,
+…
+290:  the
+…
+540:  at
+…
+10802:  looked
+…
+Vocabulary
+===== PAGE 9 =====
+How do language models see text?
+9
+For a language model:
+• The fundamental units of language are tokens
+• Tokenization is the process of breaking text into tokens
+• A tokenizer translates between text and a sequence of tokens that a language model 
+(LM) learns over
+• The vocabulary      is the set of known tokens
+Fundamentally, why do we need tokenization?
+• Models can’t just read raw text → we need a mapping from strings to sequences of 
+embeddings
+===== PAGE 10 =====
+How do language models see text?
+10
+We looked at the Milky Way.
+(We looked at the Milky Way.)
+Tokenizer
+[2167, 10802, 540, 290, 10282, 5781, 0]
+encode
+Token IDs
+How do models 
+process token IDs?
+===== PAGE 11 =====
+How do language models see text?
+11
+We looked at the Milky Way.
+(We looked at the Milky Way.)
+Tokenizer
+[2167, 10802, 540, 290, 10282, 5781, 0]
+encode
+(We)
+2167
+0
+Token IDs
+Embedding 
+Matrix Lookup
+–1
+===== PAGE 12 =====
+How do language models see text?
+12
+We looked at the Milky Way.
+(We looked at the Milky Way.)
+Tokenizer
+[2167, 10802, 540, 290, 10282, 5781, 0]
+encode
+(We)
+2167
+0
+Token IDs
+Embedding 
+Matrix Lookup
+–1
+( looked)
+10802
+===== PAGE 13 =====
+How do language models see text?
+13
+We looked at the Milky Way.
+(We looked at the Milky Way.)
+Tokenizer
+[2167, 10802, 540, 290, 10282, 5781, 0]
+encode
+( the)
+290
+0
+Token IDs
+Embedding 
+Matrix Lookup
+–1
+(We)
+2167
+( looked)
+10802
+===== PAGE 14 =====
+How do language models see text?
+14
+We looked at the Milky Way.
+(We looked at the Milky Way.)
+Tokenizer
+[2167, 10802, 540, 290, 10282, 5781, 0]
+encode
+Token IDs
+Embeddings
+===== PAGE 15 =====
+How do language models see text?
+15
+Tokenization influences how LMs learn from and process text, before they have even 
+been trained
+We looked at the Milky
+(We looked at the Milky)
+Tokenizer
+[2167, 10802, 540, 290, 10282]
+encode
+[10802, 540, 290, 10282, 5781]
+( looked at the Milky Way)
+looked at the Milky Way
+Tokenizer decodeLanguage Model
+Tokenization is typically a preprocessing
+step, not part of the core LMembed
+un-embed
+===== PAGE 16 =====
+How do language models see text?
+Tokenization influences the efficiency of LMs, both in terms of sequence lengths and 
+parameter counts
+ the Milky Way.
+Language Model
+ the Milky Way.
+Language Model
+16
+Language Model
+ the Milky Way.
+===== PAGE 17 =====
+How do language models see text?
+Tokenization influences the efficiency of LMs, both in terms of sequence lengths and 
+parameter counts
+17
+0: .
+1: ,
+…
+290:  the
+…
+540:  at
+…
+10802:  looked
+…
+Vocabulary
+ the
+Input 
+Embedding 
+Matrix
+===== PAGE 18 =====
+Word tokenization
+18
+As a first tokenization scheme,
+let’s consider simple word tokenization
+We’ll assume:
+• Tokens = whitespace-delimited words + punctuation
+• Vocabulary truncated to top   V   frequent words from a corpus
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+✅
+ Pros:
+• Semantically meaningful language units
+• One embedding ≈ one interpretable meaning
+
+===== PAGE 19 =====
+Word tokenization
+19
+As a first tokenization scheme,
+let’s consider simple word tokenization
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+❌
+ Cons:
+Jurafsky & Martin Ch.2
+• There are too many words! Vocab can be huge
+• Long tail of infrequent words
+• Zipf’s law: a word’s frequency is inversely 
+proportional to its rank by frequency
+Zipf’s Law• Language is changing all the time!
+• Merriam Webster’s Collegiate Dictionary added 
+5k new words in 12th edition (including rizz)
+===== PAGE 20 =====
+Word tokenization
+20
+As a first tokenization scheme,
+let’s consider simple word tokenization
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+❌
+ Cons:
+Jurafsky & Martin Ch.2
+Zipf’s Law
+• How do we deal with unknown words? The 
+out-of-vocabulary (OOV) problem
+• Solution 1: use regular expressions/other rule-based 
+methods to preprocess text
+• Typos: importaNt            important
+• Regularize spellings: ESPRESSSOOO       ESPRESSO
+Zipfʼs law is importaNt in NLP . UNK law isUNK in NLP.
+see Sutskever et al. 2014 & 2015
+• Solution 2: use a single token for unknown words (UNK)
+• Many words would often get mapped to UNK 😬
+
+===== PAGE 21 =====
+Character/byte tokenization (aka “tokenizer-free”)
+21
+We’ll assume:
+• Tokens = individual bytes/characters in the text
+• Note: the distinction between bytes and characters is relevant
+• 😀
+ = 1 character, 4 bytes; 地 = 1 character, 3 bytes
+• Byte and character-level models tend to be grouped together
+• Vocabulary  = {a, b, c, …, z, A, B, C, …, Z} (+ spaces, punctuation, numbers, etc.)
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+Byte/character-level models: CharBERT, CANINE, Charformer, ByT5
+Another simple tokenization scheme:
+ character/byte tokenization
+✅
+ Pros:
+• Small vocabulary size
+• Complete coverage of input (no OOV!)
+• Direct observation of spelling
+❌
+ Cons:
+• Really long sequences…
+• Potentially more difficult to build
+higher-level representations (debatable!)
+Aside: should we 
+call these 
+tokenizer-free? 
+See Arnett’s blog
+===== PAGE 22 =====
+Between words and characters: Subword Tokenization
+22
+Intuition behind subword tokenization:
+• Use data + algorithms to define what the vocabulary should be
+• Algorithms use corpus frequency statistics of adjacent segments of text to build the 
+vocabulary
+• While we sometimes get intuitive token segmentations (e.g., We’d), most of the time, 
+these are not linguistically aligned (e.g.,  Milky,  looked)
+We’d sat back on the grass, and time 
+flew by as we looked at the Milky Way.
+How can we combine the efficiency of word tokenization with the high coverage of 
+character tokenization?
+Solution: subword tokenization, where tokens are words or parts of words
+Tokenization with ChatGPT’s tokenizer:
+===== PAGE 23 =====
+Common subword tokenization algorithms:
+• Byte Pair Encoding (BPE) (Sennrich et al., 2016)
+• Start with a set of individual bytes, then iteratively merge neighboring tokens
+ 
+• WordPiece (Wu et al., 2016)
+• Similar to BPE, but iteratively merge neighboring tokens which maximize the 
+likelihood of the data after the merge
+• Unigram Language Modeling (ULM) (Kudo, 2018)
+• Start with a large vocabulary (all-subword strings) and discard tokens until we 
+reach the desired vocab size
+Between words and characters: Subword Tokenization
+23
+Common subword tokenization algorithms:
+• Byte Pair Encoding (BPE) (Sennrich et al., 2016)
+• Start with a set of individual bytes, then iteratively merge neighboring tokens
+ 
+• WordPiece (Wu et al., 2016)
+• Similar to BPE, but iteratively merge neighboring tokens which maximize the 
+likelihood of the data after the merge
+Common subword tokenization algorithms:
+• Byte Pair Encoding (BPE) (Sennrich et al., 2016)
+• Start with a set of individual bytes, then iteratively merge neighboring tokens 
+with the highest probability/frequency, up to the desired vocab size
+Common subword tokenization algorithms:
+We will be focusing on the BPE algorithm in this lecture
+===== PAGE 24 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+24
+Why focus on BPE? It is the 
+tokenization algorithm used in all 
+popular/frontier language 
+models
+What made BPE so universal?
+• It was popularized by GPT-2, 
+and OpenAI set the 
+standard for LM training
+• BPE is simple, easy to 
+implement, efficient, and 
+deterministic
+Model Family Type Vocab Size
+Gemini 2.x/Gemma 3 BPE 262k
+Gemini 1.x/Gemma 2 BPE 256k
+Llama 4 BPE 201k
+GPT-4o/GPT-5/o1/o3 BPE 200k
+Kimi K2 BPE 163k
+Qwen2.5/Qwen3/GLM-4 BPE 151k
+Grok 2 BPE 131k
+Longcat Flash Chat BPE 131k
+Llama 3/Hunyuan T1/TurboS/Large BPE 128k
+DeepSeek v3/R1 BPE 128k
+DeepSeek v2.5 BPE 100k
+===== PAGE 25 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+25
+Training Algorithm:
+1. Pre-tokenize by splitting on whitespace
+2. Initialize V as bytes in D
+3. Convert  D  into sequence of tokens (i.e., bytes)
+4. While |V| < N  :
+a. Get counts of all bigrams in D
+b. Merge most frequent pair (vi, vj)
+ into new token vn = vivj
+ where n = |V| + 1
+c. Replace all instances of  vivj  in  D  with vn
+Required:
+Training corpus D
+Desired vocab size N
+
+===== PAGE 26 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+26
+Peter Piper picked  
+a peck of pickled  
+peppers
+Corpus
+This is our 
+(very interesting) 
+training corpus D
+
+===== PAGE 27 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+27
+Peter, _Piper,  
+_picked, _a, _peck,  
+_of, _pickled,  
+_peppers
+Corpus
+First, we pre-tokenize 
+by splitting on 
+whitespace
+===== PAGE 28 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+28
+Vocab
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t} 
+Peter, _Piper,  
+_picked, _a, _peck,  
+_of, _pickled,  
+_peppers
+Corpus
+Initialize a vocab of 
+individual bytes in  D  
+as tokens
+
+===== PAGE 29 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+29
+P e t e r, _ P i p 
+e r, _ p i c k e 
+d, _ a, _ p e c k, 
+_ o f, _ p i c k l 
+e d, _ p e p p e r 
+s
+Corpus
+Vocab
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t} 
+Convert  D  into a 
+sequence of tokens 
+(i.e., bytes)
+
+===== PAGE 30 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+30
+P e t e r, _ P i p 
+e r, _ p i c k e 
+d, _ a, _ p e c k, 
+_ o f, _ p i c k l 
+e d, _ p e p p e r 
+s
+Token Pair Frequency
+_ + p 4
+p + e 4
+c + k 3
+e + r 3
+e + d 2
+i + c 2
+p + i 2
+Corpus
+Vocab
+Merge List
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t} 
+Initialize frequency 
+table of byte pairs and 
+(empty) merge list
+===== PAGE 31 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+31
+Token Pair Frequency
+_ + p 4
+p + e 4
+c + k 3
+e + r 3
+e + d 2
+i + c 2
+p + i 2
+Corpus
+Vocab
+Merge List
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t} 
+Retrieve most 
+frequent pair of 
+tokens        d d          
+P e t e r, _ P i p 
+e r, _ p i c k e 
+d, _ a, _ p e c k, 
+_ o f, _ p i c k l 
+e d, _ p e p p e r 
+s
+===== PAGE 32 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+32
+P e t e r, _ P i p 
+e r, _p i c k e d, 
+_ a, _p e c k, _ o 
+f, _p i c k l e d, 
+_p e p p e r s
+Token Pair Frequency
+_ + p 4
+p + e 4
+c + k 3
+e + r 3
+e + d 2
+i + c 2
+p + i 2
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p}
+Merge the token pair 
+into a new token
+Update the corpus, 
+vocab, and merge list
+===== PAGE 33 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+33
+Token Pair Frequency
+_ + p 4
+p + e 4
+c + k 3
+e + r 3
+e + d 2
+i + c 2
+p + i 2
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p}
+Update the frequency 
+table (since the corpus 
+has changed)
+P e t e r, _ P i p 
+e r, _p i c k e d, 
+_ a, _p e c k, _ o 
+f, _p i c k l e d, 
+_p e p p e r s
+===== PAGE 34 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+34
+Token Pair Frequency
+c + k 3
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + c 2
+p + e 2
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p}
+Update the frequency 
+table (since the corpus 
+has changed)
+P e t e r, _ P i p 
+e r, _p i c k e d, 
+_ a, _p e c k, _ o 
+f, _p i c k l e d, 
+_p e p p e r s
+===== PAGE 35 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+35
+Token Pair Frequency
+c + k 3
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + c 2
+p + e 2
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p}
+Retrieve most 
+frequent pair of 
+tokens        d d          
+P e t e r, _ P i p 
+e r, _p i c k e d, 
+_ a, _p e c k, _ o 
+f, _p i c k l e d, 
+_p e p p e r s
+===== PAGE 36 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+36
+P e t e r, _ P i p 
+e r, _p i ck e d, 
+_ a, _p e ck, _ o 
+f, _p i ck l e d, 
+_p e p p e r s
+Token Pair Frequency
+c + k 3
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + c 2
+p + e 2
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck}
+Merge the token pair 
+into a new token
+Update the corpus, 
+vocab, and merge list
+===== PAGE 37 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+37
+Token Pair Frequency
+c + k 3
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + c 2
+p + e 2
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck}
+Update the frequency 
+table (since the corpus 
+has changed)
+P e t e r, _ P i p 
+e r, _p i ck e d, 
+_ a, _p e ck, _ o 
+f, _p i ck l e d, 
+_p e p p e r s
+===== PAGE 38 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+38
+Token Pair Frequency
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + e 2
+_ + a 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck}
+Update the frequency 
+table (since the corpus 
+has changed)
+P e t e r, _ P i p 
+e r, _p i ck e d, 
+_ a, _p e ck, _ o 
+f, _p i ck l e d, 
+_p e p p e r s
+===== PAGE 39 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+39
+Token Pair Frequency
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + e 2
+_ + a 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck}
+Retrieve most 
+frequent pair of 
+tokens        d d          
+P e t e r, _ P i p 
+e r, _p i ck e d, 
+_ a, _p e ck, _ o 
+f, _p i ck l e d, 
+_p e p p e r s
+===== PAGE 40 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+40
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _p e ck, _ o f, 
+_p i ck l e d, _p 
+e p p er s
+Token Pair Frequency
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + e 2
+_ + a 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er  
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er}
+Merge the token pair 
+into a new token
+Update the corpus, 
+vocab, and merge list
+===== PAGE 41 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+41
+Token Pair Frequency
+e + r 3
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + e 2
+_ + a 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er  
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er}
+Update the frequency 
+table (since the corpus 
+has changed)
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _p e ck, _ o f, 
+_p i ck l e d, _p 
+e p p er s
+===== PAGE 42 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+42
+Token Pair Frequency
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er  
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er}
+Update the frequency 
+table (since the corpus 
+has changed)
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _p e ck, _ o f, 
+_p i ck l e d, _p 
+e p p er s
+===== PAGE 43 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+43
+Token Pair Frequency
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er  
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er}
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _p e ck, _ o f, 
+_p i ck l e d, _p 
+e p p er s
+===== PAGE 44 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+44
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _pe ck, _ o f, 
+_p i ck l e d, _pe 
+p p er s
+Token Pair Frequency
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe}
+===== PAGE 45 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+45
+Token Pair Frequency
+_p + e 2
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe}
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _pe ck, _ o f, 
+_p i ck l e d, _pe 
+p p er s
+===== PAGE 46 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+46
+Token Pair Frequency
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe}
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _pe ck, _ o f, 
+_p i ck l e d, _pe 
+p p er s
+===== PAGE 47 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+47
+Token Pair Frequency
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe}
+P e t er, _ P i p 
+er, _p i ck e d, _ 
+a, _pe ck, _ o f, 
+_p i ck l e d, _pe 
+p p er s
+===== PAGE 48 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+48
+P e t er, _ P i p 
+er, _pi ck e d, _ 
+a, _pe ck, _ o f, 
+_pi ck l e d, _pe 
+p p er s
+Token Pair Frequency
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe, _pi}
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+===== PAGE 49 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+49
+Token Pair Frequency
+_p + i 2
+e + d 2
+i + ck 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe, _pi}
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+P e t er, _ P i p 
+er, _pi ck e d, _ 
+a, _pe ck, _ o f, 
+_pi ck l e d, _pe 
+p p er s
+===== PAGE 50 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+50
+Token Pair Frequency
+_pi + ck 2
+e + d 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+_pe + ck 1
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe, _pi}
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+P e t er, _ P i p 
+er, _pi ck e d, _ 
+a, _pe ck, _ o f, 
+_pi ck l e d, _pe 
+p p er s
+===== PAGE 51 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+51
+Token Pair Frequency
+_pi + ck 2
+e + d 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+_pe + ck 1
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck, 
+er, _pe, _pi}
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+P e t er, _ P i p 
+er, _pi ck e d, _ 
+a, _pe ck, _ o f, 
+_pi ck l e d, _pe 
+p p er s
+===== PAGE 52 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+52
+P e t er, _ P i p 
+er, _pick e d, _ 
+a, _pe ck, _ o f, 
+_pick l e d, _pe p 
+p er s
+Token Pair Frequency
+_pi + ck 2
+e + d 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+_pe + ck 1
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck,
+er, _pe, _pi, _pick}
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+6. _pi + ck -> 
+_pick
+===== PAGE 53 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+53
+Token Pair Frequency
+_pi + ck 2
+e + d 2
+p + er 2
+_ + a 1
+_ + o 1
+_ + P 1
+_pe + ck 1
+{_, a, c, d, e, f, 
+i, k, l, o, p, P, 
+r, s, t, _p, ck,
+er, _pe, _pi, _pick}
+Corpus
+Vocab
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+6. _pi + ck -> 
+_pick
+…
+continue until the desired 
+vocab size       is reached
+P e t er, _ P i p 
+er, _pick e d, _ 
+a, _pe ck, _ o f, 
+_pick l e d, _pe p 
+p er s
+===== PAGE 54 =====
+Subword tokenization: Byte Pair Encoding (BPE)
+54
+We just went over the BPE training algorithm. To tokenize new text at test time, we split 
+it into bytes and apply merge rules in order
+Merge List
+1. _ + p -> _p
+2. c + k -> ck
+3. e + r -> er 
+4. _p + e -> _pe 
+5. _p + i -> _pi
+6. _pi + ck -> 
+_pick
+_ p i e r
+_pier
+_p i e r
+_p i er
+_pi er
+Input word:
+Bytes:
+Merge 1:
+Merge 2:
+Merge 3:
+===== PAGE 55 =====
+Tiktokenizer demo
+Take a look at how some common tokenizers segment text: 
+https://tiktokenizer.vercel.app/ 
+55
+===== PAGE 56 =====
+Beyond Subwords: SentencePiece & Superword Tokenization
+Pre-tokenizing based on whitespace: does it always make sense?
+• Some languages don’t use whitespace to separate words (Chinese, Japanese, Thai)
+• Multi-word expressions (e.g., “on the other hand”, “depend on”)
+56
+SentencePiece (Kudo & Richardson, 2018): a tokenizer library (not algorithm!) that 
+implements BPE and Unigram LM
+• Treats whitespace as a basic symbol in the vocabulary
+• Used by: T5, Llama 2, XLM-R, Gemma, many multilingual models
+SuperBPE (Liu et al., 2025): a pre-tokenization curriculum
+that first learns subwords, then removes whitespace
+constraints to learn superword tokens
+• Smaller vocab size and less inference compute
+
+===== PAGE 57 =====
+Has Subword Tokenization Solved All Our Problems?
+57
+Subword tokenization with BPE is the 
+de-facto standard today:
+• BPE is a simple and effective 
+compression algorithm
+• Everything can be represented 
+with the vocabulary (no OOV!)
+• Some shared representations 
+(e.g., picked, picking)
+Not everything is solved! There’s still a 
+lot of work to be done
+
+===== PAGE 58 =====
+Case Study: Spelling 🍓
+58
+===== PAGE 59 =====
+Case Study: Spelling 🍓
+Models see subword chunks, not individual characters
+• GPT-2: strawberry → ["str", "aw", "berry"]
+• GPT-4o: strawberry → single token (entire word is one opaque unit)
+• Neither tokenization lets the model directly count the r's!
+59
+More broadly, subword models struggle with:
+• Spelling out words: must decompose tokens into characters the model was never trained on
+• Reversing strings: requires character-level access the tokenizer doesn’t provide (Huang et al., 2023)
+• Robustness to typos: a single character change can shift all BPE merge boundaries, producing a 
+completely different token sequence
+See CUTE (Edman et al., 2024) and Huang et al. 2023 for character-related LM benchmarks!
+The model’s atoms of language are subwords, not characters—any character-level task 
+forces the model to reverse-engineer information not explicitly contained in the token
+===== PAGE 60 =====
+Case Study: Glitch Tokens
+60
+
+===== PAGE 61 =====
+Case Study: Glitch Tokens
+Tokenizer and model training data can be misaligned
+• BPE tokenizers are trained on one corpus; the LM is trained on a (potentially different) corpus
+• Some tokens enter the vocabulary but are rare/absent in LM training data
+• End up randomly initialized or poorly trained embeddings → undefined behavior
+61
+The famous example:  SolidGoldMagikarp
+• A Reddit username over-represented in the tokenizer training data
+• When GPT-3 was asked to repeat/explain this token, it hallucinated about the word “distribute”, 
+evaded the question or failed to repeat the token
+🎣
+ Fishing for Magikarp (Land & Bartolo, 2024)
+• Developed automatic detection methods; found glitch tokens prevalent across many models (GPT-2, 
+LLaMA 2/3, OLMo, Qwen, etc.)
+Not just a curiosity: wasted vocabulary slots
++ adversarial attack surface
+More generally: don’t train your model on 
+different data from your tokenizer (see 
+another blog post from Arnett)
+===== PAGE 62 =====
+Tokenization Beyond English
+So far, we’ve only been considering English tokenization… What happens when we apply 
+ChatGPT’s tokenizer to languages other than English?
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+French
+ 27 95
+Somali
+ 30 88
+Thai
+ 36 79
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+French
+ 27 95
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+French
+ 27 95
+Somali
+ 30 88
+Why is tokenization so important for 
+multilingual language modeling?
+Language Tokenization # Tokens # Characters
+62
+===== PAGE 63 =====
+First: Why Multilinguality
+Matters
+There are over 7,000 documented
+languages in the world!
+63
+• About 20% of the world’s population
+speaks English, but only about
+5% are native English speakers!
+Infographic 
+Source
+Real-world demand is multilingual:
+translation, cross-lingual information
+retrieval, code-switching
+ If NLP tools only work well in English, 
+we're building technology that 
+excludes most of the world
+===== PAGE 64 =====
+Despite the linguistic diversity of the 
+world, 40-45% of the Common Crawl
+is English Data!
+• High-resource language: a language 
+with abundant digital text and labeled 
+datasets/tools for training and 
+evaluating NLP systems
+• Low-resource language: a language 
+with scarce digital text and labeled 
+datasets/tools, making NLP training and 
+evaluation difficult
+Many low-resource languages (e.g. 
+Tagalog, Amharic, Yoruba) constitute 
+<0.01% of Common Crawl
+ Infographic 
+Source64
+First: Why Multilinguality
+Matters
+===== PAGE 65 =====
+65
+First: Why Multilinguality Matters
+Great sources if you’re interested in learning more about the languages of the world:
+• World Atlas of Language Structures (WALS): database of linguistic features for 2.7k langs
+• Ethnologue: database of demographic statistics for languages
+===== PAGE 66 =====
+Multilingual Language Modeling
+What exactly is a multilingual language model?
+A multilingual language model is architecturally identical to any LM
+• Same Transformer, same training objective
+• The only differences: use training data in many languages for tokenizer and LM
+66
+1
+Collect
+Text in many
+languages
+2
+Train 
+Tokenizer
+BPE on 
+multilingual
+corpus
+3
+Train LM
+Standard 
+objective
+(MLM or CLM)
+Model Year Languages Type
+mBERT 2018 104 Encoder 
+XLM-R 2020 100 Encoder 
+mT5 2021 101 Encoder-Decoder
+BLOOM 2022 46 Decoder 
+GPT-4, Llama, etc. 2023+ Implicit Decoder
+Aside: this wasn’t always the status quo!
+• XLM (2019) used Translation Language Modeling (TLM): parallel sentences from two languages are 
+concatenated and masked language modeling is applied across both
+===== PAGE 67 =====
+Stage 1: Pre-training
+XLM-R
+Masked Language Modeling on 2.5TB 
+CommonCrawl data across 100 languages
+en zh de fr es
+ar ja hi sw +91
+MLM Example:
+The cat sat on the [MASK].
+Le [MASK] était très heureux.
+Der Hund [MASK] weniger glücklich.
+Stage 2: Fine-tune (English)
+XLM-R + Classifier Head
+Supervised training on English-only 
+labeled data (e.g., sentiment analysis). 
+Shared multilingual representations allow 
+cross-lingual generalization
+Training samples (English only):
+"Great movie, loved it!" → Positive
+"Terrible service, awful." → Negative
+"Best purchase ever!" →
+Stage 3: Zero-Shot Inference
+Deploy on Any Language!
+The shared representation space enables 
+predictions in any pretrained language,
+no target-language labels needed
+Predictions:
+ FR Film magnifique ! Positive
+DE Schrecklicher Service Negative
+ZH 非常好的体验 PositivePositive
+→
+→
+→
+The Power of Cross Lingual Transfer
+Multilingual language models trained on mixtures of language corpora show remarkable 
+abilities for cross-lingual transfer, even without translation language modeling
+• Cross-lingual transfer: a model fine-tuned on labeled data in one language (e.g., English) can perform 
+the task in another language it was never fine-tuned on
+67
+===== PAGE 68 =====
+Impact of Vocabulary Size and Overlap
+Vocabulary overlap facilitates cross-lingual 
+transfer
+(Limisiewicz et al., 2023; Kallini et al., 2025a)
+• Overlapping vocabularies outperform disjoint ones, 
+and more overlap generally means better transfer
+• Even "false friends" (shared tokens with different 
+meanings) help create useful cross-lingual 
+embeddings
+• Benefits may be task-dependent
+68
+Kallini et al., 2025a
+But each language still needs sufficient 
+vocabulary allocation
+• XLM-V scaled to 1M tokens (4× XLM-R)—better 
+coverage, but at a significant efficiency cost
+===== PAGE 69 =====
+The Curse of Multilinguality
+Cross-lingual transfer seems to be a solution to high-/low-resource language disparities!
+• Just fine-tune on English and apply my multilingual LM to new languages! (not exactly…)
+The curse of multilinguality: adding more languages helps cross-lingual transfer... up to a 
+certain point (also introduced in the XLM-R paper)
+69
+• On cross-lingual natural language inference (XNLI), 
+XLM-R’s accuracy drops from 71.8% (7 langs) to 
+67.7% (100 langs) with fixed model capacity
+Why does this happen?
+• Fixed model capacity: a model has finite parameters
+• Adding more languages means each language gets a 
+smaller "share"
+• High-resource languages (English, French) see 
+performance drop as languages are added
+• Low-resource languages initially benefit from transfer, 
+but eventually suffer too
+===== PAGE 70 =====
+Tokenization Beyond English
+So far, we’ve only been considering English tokenization… What happens when we apply 
+ChatGPT’s tokenizer to languages other than English?
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+French
+ 27 95
+Somali
+ 30 88
+Thai
+ 36 79
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+French
+ 27 95
+Language Tokenization # Tokens # Characters
+English
+ 21 75
+French
+ 27 95
+Somali
+ 30 88
+Now that you have context on multilingual 
+LMs, why is tokenization so important?
+Language Tokenization # Tokens # Characters
+70
+===== PAGE 71 =====
+Tokenization Introduces Unfairness Between Languages
+The problem starts even before the model is trained, at the tokenizer
+• Tokenization can matter just as much as pre-training dataset size (Rust et al., 2021)
+• Tokenization length differences of up to 15x between languages for equivalent text (Petrov et al., 2023) 
+Non-English speakers are overcharged by 
+commercial LM APIs (Ahia et al., 2023)
+• Systematic analysis of OpenAI API across 22 
+typologically diverse languages
+• Users of many languages: pay more per unit of 
+meaning, get poorer results, and tend to come 
+from regions where APIs are already less affordable
+• Subword fertility: the average number of subword 
+tokens produced per word
+• Subword fertility and downstream 
+performance are strongly negatively 
+correlated
+71
+===== PAGE 72 =====
+Revisiting Character/Byte Tokenization
+Multilinguality may be another reason to revisit 
+character/byte tokenization! Let’s first take a 
+closer look at the multilingual results for CANINE, 
+Google’s character-level counterpart to mBERT:
+Since CANINE covers the full 
+unicode alphabet, it could 
+process a language it had 
+never seen!
+72
+===== PAGE 73 =====
+Revisiting Character/Byte Tokenization
+Character/byte models can also be made more efficient to process long sequences
+• Great opportunity for creative architecture work!
+[–0.1, –28.6, –1.4]
+✅
+✅
+ ❌
+Delete Gate 
+T h e
+MrT5 (Kallini et al., 2025b): teaching ByT5 to use only a subset of bytes
+for most processing, dynamically reducing the sequence length
+A learnable delete gate 
+reduces the sequence 
+length dynamically
+MrT5 learns language-specific compression
+73
+===== PAGE 74 =====
+H-Nets
+(Hwang et al., 2025)
+Byte Latent Transformer
+(Pagnoni et al., 2025)
+Hierarchical Autoregressive 
+Transformers
+(Neitemeier et al., 2025)
+74
+Revisiting Character/Byte Tokenization
+Many creative new architectures for byte-level modeling!
+See also: Bolmo (Minixhofer et al., 2025), EvaByte (Zheng et al., 2025) 
+===== PAGE 75 =====
+Revisiting Character/Byte Tokenization
+Character/byte tokenization also addresses other issues of subword tokenization:
+• No glitch tokens: every character/byte has been covered in the training data
+• Robustness to character-level manipulations or noise
+• Direct observation of character composition of words
+Latent Tokenization: byte/character-level models are learning the relevant units of meaning 
+as a part of the architecture
+• Can they get us closer to capturing all these notions at once?
+Characters: We looked at the Milky Way.
+Morphemes: We looked at the Milky Way.
+Words: We looked at the Milky Way.
+Phrases: We looked at the Milky Way.
+75
+===== PAGE 76 =====
+Acknowledgments 🤗
+Thank you to the following people for sharing sample slides:
+• Dan Jurafsky
+• Alisa Liu
+• Yejin Choi / Taylor Sorensen
+• Christopher Potts
+Thank you to the following people for sharing sample papers and reference pointers:
+• Tolúlọpẹ ́ Ògúnrẹ ̀mí
+• Catherine Arnett
+Thank you to the Jurafsky Lab members for early feedback on this lecture
+76

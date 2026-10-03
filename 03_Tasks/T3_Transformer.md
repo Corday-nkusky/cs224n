@@ -15,7 +15,7 @@
 
 ## 目标
 
-把 Transformer 从"听说过"变成"能默写、能实现、能说清每个设计决定的 why"。slides 是教学简化版，**我会同步给出论文原文口径与工程实现的差异**（`04_Notes/N3_transformer辨析.md`）。
+把 Transformer 从"听说过"变成"能默写、能实现、能说清每个设计决定的 why"。slides 是教学简化版，**我会同步给出论文原文口径与工程实现的差异**（`06_讲义精讲/K04_注意力与Transformer/04_原理深潜.md`）。
 
 ## 任务清单
 
@@ -29,7 +29,8 @@
 - `01_Lectures/cs224n-2026-lecture05-transformers.pdf`
 - 论文：*Attention Is All You Need*（arXiv 1706.03762）
 - Jay Alammar, *The Illustrated Transformer*（配图辅助，**以论文为准**）
-- `04_Notes/N3_transformer辨析.md`（讲解文档：post-LN vs pre-LN、mask 语义、KV cache 等）
+- `06_讲义精讲/K04_注意力与Transformer/04_原理深潜.md`（讲解文档：post-LN vs pre-LN、mask 语义、KV cache 等）
+- **上手桥**：[`07_伴学/04_A3Transformer上手指引.md`](file:///d:/code/cs224n/07_伴学/04_A3Transformer上手指引.md)（T4 开工前走；T3 先只读台阶 ①–② 做概念确认）
 
 ## 常见坑
 
