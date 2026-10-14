@@ -1,0 +1,2592 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
+<title>K02 · 神经网络与反向传播 — CS224N 学习路径</title>
+<meta name="description" content="CS224N 第 2 章：神经网络与反向传播。沉浸式交互课程，全部数据实跑验证，离线可用。">
+<style>
+/* ==== 内联自 assets/k01.css ==== */
+/* ================================================================
+   CS224N K01 沉浸式课程流 · 共享样式
+   ================================================================ */
+
+/* ---- 变量 ---- */
+:root {
+  --bg-0: #0b1020;
+  --bg-1: #0f172a;
+  --bg-2: #162032;
+  --bg-3: rgba(30,41,59,0.65);
+  --fg: #e2e8f0;
+  --fg-2: #94a3b8;
+  --fg-3: #64748b;
+  --accent: #38bdf8;
+  --accent-2: #818cf8;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+  --border: rgba(148,163,184,0.12);
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+html[data-theme="light"] {
+  --bg-0: #f8fafc;
+  --bg-1: #ffffff;
+  --bg-2: #f1f5f9;
+  --bg-3: rgba(241,245,249,0.85);
+  --fg: #0f172a;
+  --fg-2: #475569;
+  --fg-3: #94a3b8;
+  --border: rgba(148,163,184,0.25);
+  --shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* ---- 全局 ---- */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background: var(--bg-0);
+  color: var(--fg);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height:1.6;
+  overflow-x:hidden;
+  transition: background .3s, color .3s;
+}
+button{font-family:inherit}
+
+/* ---- 顶部导航 ---- */
+.top-nav{
+  position:fixed; inset:0 0 auto 0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 20px;
+  background: linear-gradient(180deg, var(--bg-1) 60%, transparent);
+  pointer-events:none;
+}
+.top-nav > *{pointer-events:auto}
+.brand{
+  display:flex; align-items:center; gap:10px;
+  text-decoration:none; color: var(--fg);
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display:grid; place-items:center; font-weight:800; color:#fff; font-size:14px;
+}
+.brand-text{ font-weight:700; letter-spacing:.2px;}
+.brand-text small{ display:block; color:var(--fg-3); font-size:11px; font-weight:500; margin-top:-2px}
+.nav-right{ display:flex; align-items:center; gap:10px;}
+.nav-btn{
+  background: var(--bg-3);
+  border:1px solid var(--border);
+  color: var(--fg-2);
+  border-radius:10px; padding:8px 12px; cursor:pointer; font-size:13px;
+  backdrop-filter: blur(8px);
+  transition: transform .15s, background .2s;
+}
+.nav-btn:hover{ background: var(--bg-2); color: var(--fg);}
+
+/* ---- 进度 ---- */
+.progress-wrap{ display:flex; align-items:center; gap:10px;}
+.progress-track{
+  width:120px; height:6px; border-radius:3px; background: var(--bg-2); overflow:hidden;
+}
+.progress-fill{ height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius:3px; transition: width .4s ease;}
+.progress-label{ font-size:12px; color:var(--fg-3); min-width:58px; text-align:right;}
+
+/* ---- 场景容器 ---- */
+.scene-container{ position:relative;}
+.scene{
+  display:none;
+  padding: 90px 22px 120px;
+  max-width: 980px; margin: 0 auto;
+  animation: fadeUp .55s ease both;
+}
+.scene.active{ display:block;}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(18px);}
+  to   { opacity:1; transform: translateY(0);}
+}
+
+/* ---- 场景公共头 ---- */
+.scene-header{ margin-bottom: 28px;}
+.step-label{ display:inline-block; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); background: linear-gradient(90deg, rgba(56,189,248,.12), rgba(129,140,248,.12)); padding:4px 10px; border-radius:20px; margin-bottom:10px;}
+.scene-title{ font-size: clamp(26px, 4.5vw, 38px); font-weight:800; line-height:1.15; margin:0 0 10px; letter-spacing:-.02em;}
+.scene-lead{ font-size:18px; color:var(--fg-2); max-width: 720px; margin:0;}
+
+/* ---- 卡片 ---- */
+.card{
+  background: var(--bg-3);
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin: 18px 0;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+  transition: background .3s, border-color .3s;
+}
+.card > :first-child{ margin-top:0;}
+.card > :last-child{ margin-bottom:0;}
+
+/* ---- 布局工具 ---- */
+.grid-2{ display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;}
+.grid-3{ display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;}
+@media (max-width: 860px){ .grid-2, .grid-3{ grid-template-columns: 1fr;}}
+
+/* ---- 按钮 ---- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  background: var(--bg-2); color: var(--fg); border:1px solid var(--border);
+  border-radius: 12px; padding: 10px 18px; cursor:pointer; font-size:14px; font-weight:600;
+  transition: transform .12s, background .2s, box-shadow .2s;
+}
+.btn:hover{ transform: translateY(-1px); background: var(--bg-3);}
+.btn:active{ transform: translateY(0);}
+.btn-primary{ background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#062c36; border:none;}
+.btn-primary:hover{ filter: brightness(1.08);}
+.btn-large{ padding: 14px 28px; font-size:16px; border-radius:14px;}
+.btn-ghost{ background: transparent;}
+
+/* ---- 底部场景导航 ---- */
+.scene-footer{
+  position:fixed; inset: auto 0 0 0; z-index:40;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 14px 20px 18px;
+  background: linear-gradient(0deg, var(--bg-1) 60%, transparent);
+  pointer-events:none;
+}
+.scene-footer > *{ pointer-events:auto;}
+.dots{ display:flex; gap:8px;}
+.dot{
+  width:10px; height:10px; border-radius:50%; background: var(--fg-3); opacity:.35; cursor:pointer; transition: .25s;
+}
+.dot.active{ opacity:1; background: var(--accent); transform: scale(1.15);}
+
+/* ---- 封面特殊 ---- */
+.scene-cover{ text-align:center; padding-top: 120px;}
+.cover-badge{ display:inline-block; font-size:12px; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--accent-2); border:1px solid var(--border); padding:6px 14px; border-radius:20px; margin-bottom:18px;}
+.cover-title{ font-size: clamp(34px, 6vw, 60px); font-weight:900; line-height:1.05; margin:0 auto 16px; max-width: 900px; letter-spacing:-.03em; background: linear-gradient(135deg, var(--fg) 60%, var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.cover-lead{ font-size: clamp(16px, 2.2vw, 22px); color:var(--fg-2); max-width: 640px; margin: 0 auto 28px;}
+.cover-meta{ color:var(--fg-3); font-size:14px; margin-bottom:32px;}
+.scene-map{ display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; max-width: 860px; margin: 40px auto 0; text-align:left;}
+.map-card{
+  background: var(--bg-3); border:1px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; transition:.2s;
+}
+.map-card:hover{ border-color: var(--accent); transform: translateY(-2px);}
+.map-card .num{ font-size:12px; color:var(--accent); font-weight:700;}
+.map-card .ttl{ font-size:13px; font-weight:600; margin-top:4px;}
+.map-card.locked{ opacity:.5; cursor:not-allowed;}
+
+/* ---- 交互组件：滑块 ---- */
+.slider-wrap{ display:flex; align-items:center; gap:14px; margin: 12px 0;}
+.slider-wrap input[type=range]{ flex:1; accent-color: var(--accent);}
+.slider-val{ min-width:40px; text-align:center; font-weight:700; color:var(--accent); font-variant-numeric: tabular-nums;}
+
+/* ---- 交互组件：矩阵 ---- */
+.matrix-wrap{ overflow:auto; margin: 10px 0;}
+.matrix{ display:grid; gap:3px; font-size:13px; font-variant-numeric: tabular-nums;}
+.matrix .cell{
+  background: var(--bg-2); border-radius:6px; padding:6px 8px; text-align:center; min-width:36px; transition:.15s;
+}
+.matrix .cell.head{ background: transparent; color:var(--fg-3); font-weight:600; font-size:12px;}
+.matrix .cell.on{ background: rgba(56,189,248,.18); color: var(--accent); font-weight:700;}
+.matrix .cell.sel{ outline: 2px solid var(--accent); }
+
+/* ---- 交互组件：词云/语料 ---- */
+.corpus-line{ display:flex; flex-wrap:wrap; gap:8px; margin: 14px 0;}
+.token{
+  background: var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:14px; font-weight:600; transition:.25s; cursor:default;
+}
+.token.center{ background: rgba(56,189,248,.2); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.12);}
+.token.context{ background: rgba(129,140,248,.18); border-color: var(--accent-2); color: var(--accent-2);}
+
+/* ---- 交互组件：条形图 ---- */
+.bars{ display:flex; align-items:flex-end; gap:10px; height:160px; padding:10px 0;}
+.bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;}
+.bar-track{ width:100%; background: var(--bg-2); border-radius:8px 8px 0 0; position:relative; overflow:hidden;}
+.bar-fill{ position:absolute; bottom:0; left:0; right:0; border-radius:8px 8px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-2)); transition: height .6s cubic-bezier(.34,1.56,.64,1);}
+.bar-label{ font-size:12px; color:var(--fg-3); text-align:center;}
+.bar-num{ font-size:13px; font-weight:700; color:var(--fg);}
+
+/* ---- 交互组件：散点 ---- */
+.scatter-box{ position:relative; width:100%; height:280px; background: var(--bg-2); border-radius:12px; border:1px solid var(--border); overflow:hidden;}
+.scatter-point{ position:absolute; transform:translate(-50%,-50%); width:10px; height:10px; border-radius:50%; background: var(--accent); transition: left .4s, top .4s;}
+.scatter-label{ position:absolute; transform:translate(-50%,-120%); font-size:11px; color:var(--fg-2); white-space:nowrap; pointer-events:none;}
+
+/* ---- 测验 ---- */
+.quiz-opt{ display:flex; align-items:center; gap:10px; background: var(--bg-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:8px 0; cursor:pointer; transition:.15s;}
+.quiz-opt:hover{ border-color: var(--accent-2);}
+.quiz-opt.correct{ border-color: var(--ok); background: rgba(52,211,153,.08);}
+.quiz-opt.wrong{ border-color: var(--err); background: rgba(248,113,113,.08);}
+.quiz-opt input{ accent-color: var(--accent);}
+
+/* ---- 公式块 ---- */
+.katex-display{ margin: 14px 0; overflow-x:auto;}
+
+/* ---- 杂项 ---- */
+.tag{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background: rgba(56,189,248,.12); color: var(--accent); margin-right:6px;}
+.tag.ok{ background: rgba(52,211,153,.12); color: var(--ok);}
+.tag.warn{ background: rgba(251,191,36,.12); color: var(--warn);}
+.tag.err{ background: rgba(248,113,113,.12); color: var(--err);}
+
+.callout{ border-left: 3px solid var(--accent); padding-left:14px; margin: 14px 0; color: var(--fg-2);}
+.callout.warn{ border-color: var(--warn);}
+.callout.err{ border-color: var(--err);}
+
+.hidden{ display:none !important;}
+
+/* ---- 推导步进器 ---- */
+.stepper ol{ margin:10px 0 0; padding-left:22px;}
+.stepper .step{ display:none; margin:8px 0; line-height:1.7;}
+.stepper .step.show{ display:list-item; animation: fadeUp .35s ease both;}
+.stepper .step .formula{ margin:8px 0;}
+
+/* ---- 数值表 ---- */
+table.num{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:14px; margin:10px 0;}
+table.num th, table.num td{ padding:7px 12px; border-bottom:1px solid var(--border); text-align:right;}
+table.num th:first-child, table.num td:first-child{ text-align:left;}
+table.num th{ color:var(--fg-3); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+
+/* ---- 数学高亮 ---- */
+.msym{ font-family: Georgia, "Times New Roman", serif; font-style: italic;}
+.formula.small{ font-size:15px; padding:10px;}
+
+/* ---- 滚动条 ---- */
+::-webkit-scrollbar{ width:8px; height:8px;}
+::-webkit-scrollbar-track{ background: transparent;}
+::-webkit-scrollbar-thumb{ background: var(--fg-3); border-radius:4px;}
+</style>
+<style>
+/* ---------- 本页专用（沿用 K01 设计系统） ---------- */
+.hero-num{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(120px, 22vw, 220px); line-height: .9; font-weight: 900;
+  color: transparent; -webkit-text-stroke: 2px rgba(148,163,184,.35);
+  letter-spacing:-.04em; user-select:none; margin: 10px 0 0;
+}
+.quote{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(19px, 2.8vw, 26px); font-style: italic; line-height:1.5;
+  border-left: 3px solid var(--accent); padding: 6px 0 6px 20px; margin: 18px 0;
+  color: var(--fg);
+}
+.quote .who{ display:block; font-style: normal; font-size:13px; color:var(--fg-3); margin-top:8px; font-family: inherit;}
+
+.formula{
+  font-family: Georgia, "Times New Roman", serif; font-size: 19px;
+  display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap;
+  padding: 16px 12px; background: var(--bg-2); border:1px solid var(--border); border-radius:12px; margin: 14px 0;
+}
+.frac{ display:inline-flex; flex-direction:column; text-align:center; vertical-align:middle;}
+.frac .num{ border-bottom: 1.5px solid currentColor; padding: 0 7px;}
+.frac .den{ padding: 0 7px;}
+.formula sub, .formula sup{ font-size: 12px;}
+.formula .big{ font-size: 26px; line-height:1;}
+
+.kv{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+.kv .pill{ background:var(--bg-2); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:13px;}
+.kv .pill b{ color: var(--accent);}
+
+.word-chip{
+  display:inline-block; background:var(--bg-2); border:1px solid var(--border); border-radius:10px;
+  padding:8px 14px; margin:4px; cursor:pointer; font-weight:600; font-size:15px; transition:.15s;
+}
+.word-chip:hover{ border-color: var(--accent);}
+.word-chip.picked{ background: rgba(56,189,248,.18); border-color: var(--accent); color: var(--accent);}
+
+.vec{ font-family: Consolas, "Cascadia Code", monospace; font-size:14px; letter-spacing:1px; color: var(--fg-2); background:var(--bg-2); border-radius:8px; padding:8px 12px; display:inline-block;}
+
+.stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0;}
+.stat{ flex:1; min-width:150px; background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px;}
+.stat .v{ font-size:24px; font-weight:800; color: var(--accent); font-variant-numeric:tabular-nums;}
+.stat .k{ font-size:12px; color:var(--fg-3); margin-top:2px;}
+
+.checkpoint{ border:1px dashed rgba(56,189,248,.4); border-radius: var(--radius); padding:18px 20px; margin:22px 0; background: rgba(56,189,248,.05);}
+.checkpoint .cp-head{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; letter-spacing:.06em; color:var(--accent); text-transform:uppercase; margin-bottom:8px;}
+.cp-feedback{ margin-top:10px; font-size:14px; font-weight:600; min-height:20px;}
+.cp-feedback.good{ color: var(--ok);}
+.cp-feedback.bad{ color: var(--err);}
+
+.mini-card{ background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:16px;}
+.mini-card h4{ margin:0 0 8px; font-size:15px;}
+.mini-card p{ margin:0; font-size:14px; color:var(--fg-2);}
+
+table.cmp{ width:100%; border-collapse:collapse; font-size:14px; margin:12px 0;}
+table.cmp th, table.cmp td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+table.cmp th{ color:var(--fg-3); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+
+.self-test{ list-style:none; padding:0; margin:0;}
+.self-test li{ border:1px solid var(--border); border-radius:12px; margin:10px 0; overflow:hidden;}
+.self-test .q{ padding:14px 16px; cursor:pointer; font-weight:600; display:flex; justify-content:space-between; align-items:center; background:var(--bg-2);}
+.self-test .q:hover{ border-color:var(--accent);}
+.self-test .q .hint{ font-size:12px; color:var(--fg-3); font-weight:500; flex-shrink:0; margin-left:10px;}
+.self-test .a{ display:none; padding:14px 16px; color:var(--fg-2); font-size:14px; border-top:1px solid var(--border); line-height:1.8;}
+.self-test li.open .a{ display:block; animation: fadeUp .3s ease both;}
+
+.score-card{ text-align:center; padding:30px;}
+.score-big{ font-size:64px; font-weight:900; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+
+.toast{
+  position:fixed; left:50%; bottom:86px; transform:translateX(-50%) translateY(20px);
+  background:var(--bg-1); border:1px solid var(--accent); color:var(--fg); border-radius:12px;
+  padding:10px 18px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.3s; z-index:99;
+  box-shadow: var(--shadow);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0);}
+
+svg text{ font-family: inherit;}
+
+/* XOR 实验 */
+.xor-stage{ display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;}
+.xor-stage svg{ background:var(--bg-2); border-radius:12px; border:1px solid var(--border); width:100%; max-width:360px; height:auto;}
+.xor-ctrl{ flex:1; min-width:230px;}
+.mono{ font-family: Consolas, "Cascadia Code", monospace; font-variant-numeric:tabular-nums;}
+
+/* 计算图 */
+.cg-wrap{ overflow-x:auto; }
+.cg-node{ cursor:default; transition:.2s;}
+.cg-node rect, .cg-node circle{ transition:.2s;}
+.cg-node.lit rect{ stroke: var(--accent); stroke-width:2.5;}
+.cg-node.lit circle{ stroke: var(--accent); stroke-width:2.5;}
+.cg-val{ font-family: Consolas, monospace; font-size:12px; fill: var(--fg-2);}
+.cg-name{ font-size:13px; font-weight:700; fill: var(--fg);}
+.cg-grad{ font-family: Consolas, monospace; font-size:11px; fill: var(--warn);}
+
+/* 推导步进器里的形状标注 */
+.shp{ color:var(--fg-3); font-size:12px; font-family:Consolas,monospace; }
+
+/* 静态配图 */
+.fig{ margin:18px 0; }
+.fig svg{ width:100%; height:auto; display:block; background:var(--bg-2); border:1px solid var(--border); border-radius:12px;}
+.fig figcaption{ font-size:13px; color:var(--fg-2); margin-top:9px; line-height:1.75; padding:0 2px;}
+.fig figcaption b{ color: var(--fg); }
+.fig .svgtxt{ font-family: inherit; }
+
+@media (max-width: 720px){
+  .scene{ padding: 76px 16px 110px;}
+  .progress-track{ width:70px;}
+  .brand-text small{ display:none;}
+}
+</style>
+<style>
+
+/* ============================================================
+ * 手机端补丁（build_mobile.py 注入，只存在于单文件版）
+ * 1) iOS 横屏自动放大字号 —— 关掉
+ * 2) 刘海 / 底部手势条 —— 固定栏与正文避开安全区
+ * 3) 手指点不准 —— 抬高按钮、选项、滑块的触摸区
+ * 4) 顶/底固定栏的毛玻璃 —— iOS Safari 要 -webkit- 前缀
+ * 5) 窄屏溢出 —— 表格、SVG 图、矩阵自己横向滚，不许带着整页滚
+ * ========================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-wrap: break-word; }
+
+/* 固定栏毛玻璃前缀 */
+.top-nav, .scene-footer, .card, .nav-btn { -webkit-backdrop-filter: blur(10px); }
+
+/* 安全区：刘海屏不被盖、底部留出手势条 */
+@supports (padding: max(0px)) {
+  .top-nav {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .scene-footer {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .scene {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+}
+
+/* 手指友好的最小点击区 */
+.btn, .nav-btn, .quiz-opt, .map-card, select, input[type=range] { min-height: 44px; }
+.slider-wrap input[type=range] { padding: 12px 0; }
+.dot { width: 13px; height: 13px; }
+.dots { gap: 10px; }
+
+@media (max-width: 860px) {
+  .scene { padding: 78px 14px 112px; }
+  .card { padding: 15px; }
+  .scene-title { line-height: 1.2; }
+  .cover-title { line-height: 1.1; }
+
+  /* 表格在窄屏自己横向滚 */
+  table.num, table.cmp { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 内联 SVG 图：保证最小可读宽度，超出部分让它自己滚 */
+  .fig { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fig svg { min-width: 460px; }
+
+  /* 矩阵 / 条形图 / 代码块 */
+  .matrix-wrap, .bars, pre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 统计块两列排（若页面用了 4 列 1fr 的 stat-row） */
+  .stat-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* 顶栏：手机上收起副标题，标题单行省略，别挤成两行 */
+  .top-nav { gap: 8px; }
+  .brand-text small { display: none; }
+  .brand-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media print { .top-nav, .scene-footer { display: none !important; } }
+
+</style>
+</head>
+<body>
+
+<!-- ================= 顶部导航 ================= -->
+<nav class="top-nav">
+  <a class="brand" href="index.html">
+    <div class="brand-mark">N</div>
+    <div class="brand-text">CS224N 学习路径<small>K02 · 神经网络与反向传播</small></div>
+  </a>
+  <div class="nav-right">
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0 / 14</div>
+    </div>
+    <button class="nav-btn" id="themeBtn">☾ 浅色</button>
+    <a class="nav-btn" href="index.html" style="text-decoration:none;">⌂ 路径</a>
+  </div>
+</nav>
+
+<div class="scene-container" id="scenes">
+
+<!-- ============================================================
+     场景 0 · 封面
+============================================================ -->
+<section class="scene scene-cover" data-scene="0">
+  <div class="cover-badge">CS224N · 第 2 章</div>
+  <div class="hero-num">K02</div>
+  <h1 class="cover-title">神经网络与反向传播</h1>
+  <p class="cover-lead">K01 的线性分类器不够用了。给它叠层、加非线性之后——<br><b>每个参数对最终损失的贡献，怎么算出来？</b></p>
+  <div class="cover-meta">10 个场景 · 8 个交互实验 · 第一道闸门：白纸手推 ∂L/∂W₁</div>
+  <button class="btn btn-primary btn-large" id="startBtn">开始 →</button>
+  <div class="scene-map" id="sceneMap"></div>
+</section>
+
+<!-- ============================================================
+     场景 1 · 线性分类器死在哪
+============================================================ -->
+<section class="scene" data-scene="1">
+  <header class="scene-header">
+    <span class="step-label">场景 01 · 问题</span>
+    <h2 class="scene-title">四个点、一条直线：为什么它摆不平</h2>
+    <p class="scene-lead">这一节要把"<b>一条线把点分开</b>"这句话的含义钉死——它指的是<b>用这条线逐个给点判类别，判对几个就是几分</b>。含义说清之后，你会亲手发现：无论怎么调，最多判对 3 个。最后给出严格证明。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先接上话头：K01 最后那个分类器，到底是怎么分的？</h3>
+    <p style="font-size:15px;line-height:1.9;">K01 收尾时留下一个"线性分类器"：给它一个输入，它给每个类别算一个分数，然后把<b>分数最高的那个类</b>当作答案。这套东西在只有两个类的时候最好拆开看，下面就用两个类，记作 A 和 B。</p>
+    <p style="font-size:15px;line-height:1.9;">分类器对同一个输入 x 会算出两个分数，记作 <span class="msym">f<sub>A</sub>(x)</span> 和 <span class="msym">f<sub>B</sub>(x)</span>。判定规则只有一条——比大小：<span class="msym">f<sub>A</sub>(x) &gt; f<sub>B</sub>(x)</span> 就判成 A，否则判成 B。</p>
+    <p style="font-size:15px;line-height:1.9;">现在问一个关键问题：<b>把平面上所有"会被判成 A"的点圈起来，这块区域长什么样、它的边界是什么形状？</b>边界上的点，正是两个分数打平手的那些点，也就是满足 <span class="msym">f<sub>A</sub>(x) − f<sub>B</sub>(x) = 0</span> 的点。而在 K01 里，分数是"权重乘输入再相加"这种线性形式，所以 f<sub>A</sub>(x) − f<sub>B</sub>(x) 也是线性的——一个线性式子等于 0，它的解集<b>正是一条直线</b>。</p>
+    <p style="font-size:15px;line-height:1.9;">结论：<b>这类分类器画出来的判定边界，必然是一条直线</b>。这就是它叫"线性"分类器的原因。也因此，判断"它行不行"这个问题，可以直接翻译成一道几何题：<b>能不能用一条直线把两类点分开？</b></p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 680 320" role="img" aria-label="线性分类器的判定边界是一条直线">
+        <defs>
+          <marker id="arw1" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto">
+            <path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/>
+          </marker>
+        </defs>
+        <!-- 两个区域 -->
+        <polygon points="60,40 440,40 440,90 60,220" fill="rgba(56,189,248,.10)"/>
+        <polygon points="60,220 440,90 440,270 60,270" fill="rgba(251,191,36,.10)"/>
+        <!-- 坐标轴 -->
+        <line x1="60" y1="270" x2="470" y2="270" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw1)"/>
+        <line x1="60" y1="270" x2="60" y2="30" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw1)"/>
+        <text x="478" y="274" font-size="13" fill="var(--fg-3)">x₁</text>
+        <text x="44" y="34" font-size="13" fill="var(--fg-3)">x₂</text>
+        <!-- 边界线 -->
+        <line x1="60" y1="220" x2="440" y2="90" stroke="var(--fg)" stroke-width="2.5" stroke-dasharray="8 5"/>
+        <text x="240" y="112" font-size="13" fill="var(--fg-2)">边界：f_A(x) − f_B(x) = 0</text>
+        <!-- A 类样本 -->
+        <circle cx="140" cy="90" r="8" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.5"/>
+        <circle cx="200" cy="120" r="8" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.5"/>
+        <circle cx="110" cy="150" r="8" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.5"/>
+        <text x="360" y="72" font-size="14" font-weight="700" fill="#38bdf8">判 A</text>
+        <!-- B 类样本 -->
+        <rect x="293" y="193" width="15" height="15" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.5"/>
+        <rect x="353" y="223" width="15" height="15" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.5"/>
+        <rect x="253" y="163" width="15" height="15" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.5"/>
+        <text x="150" y="250" font-size="14" font-weight="700" fill="#fbbf24">判 B</text>
+        <!-- 右侧图例说明 -->
+        <text x="500" y="86" font-size="13" fill="var(--fg-2)">上半区 → 判 A</text>
+        <text x="500" y="112" font-size="13" fill="var(--fg-2)">下半区 → 判 B</text>
+        <text x="500" y="150" font-size="13" fill="var(--fg-3)">两类分数相等处</text>
+        <text x="500" y="170" font-size="13" fill="var(--fg-3)">= 一条直线</text>
+        <text x="500" y="208" font-size="13" fill="var(--fg-2)">分数是线性的</text>
+        <text x="500" y="228" font-size="13" fill="var(--fg-2)">⇒ 边界必是直线</text>
+        <circle cx="482" cy="80" r="7" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.2"/>
+        <text x="600" y="86" font-size="12" fill="var(--fg-3)">A 类</text>
+        <rect x="476" y="104" width="13" height="13" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.2"/>
+        <text x="600" y="116" font-size="12" fill="var(--fg-3)">B 类</text>
+      </svg>
+      <figcaption><b>线性分类器的边界为什么一定是直线。</b>分类器对每个输入算两个分数 f_A、f_B，谁大判谁。把"判 A"的所有点圈成一块区域，它的边界就是两个分数打平（f_A = f_B）的地方。而分数是输入的线性式，线性式等于 0 的解集正是一条直线——所以判别边界只能是直的。图中蓝色圆点是 A 类、橙色方块是 B 类，虚线就是那条边界。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">先把话说明白：任务、规则、"分开"的定义</h3>
+
+    <p style="font-weight:700;margin:10px 0 4px;">① 任务：给 4 个点判类别</p>
+    <p style="font-size:15px;line-height:1.9;margin-top:0;">先交代数据。每个"点"代表一个待分类的东西，它有两个可以量的特征，我们用两个数 (x₁, x₂) 表示；把这两个数当成平面上的横、纵坐标，一个点就画在平面上。真实世界里这两个数可以是任何东西——比如邮件里"出现'免费'这个词的次数"和"全大写字母的比例"，而类别 A/B 就是"垃圾邮件 / 正常邮件"。这里不关心具体含义，只关心数值。</p>
+    <p style="font-size:15px;line-height:1.9;">本题一共只有 4 个点，每个点的类别都已经知道（下表就是全部数据，也是全部答案）：</p>
+    <table class="cmp" style="max-width:420px;">
+      <tr><th>点 (x₁, x₂)</th><th>真实类别</th></tr>
+      <tr><td class="mono">(0, 0)</td><td>A</td></tr>
+      <tr><td class="mono">(1, 1)</td><td>A</td></tr>
+      <tr><td class="mono">(1, 0)</td><td>B</td></tr>
+      <tr><td class="mono">(0, 1)</td><td>B</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;">要做到的事：设计一个规则，以后随手丢给它一个点（哪怕不在上面这 4 个里），它都能吐出这个点是 A 还是 B。<b>为什么用 4 个点这么小的规模</b>：因为它是"线性边界会翻车"这件事能发生的最小例子——点再少，随便一条线就能分开，暴露不出问题；这个规模刚好把毛病卡在最干净的位置上。</p>
+    <p style="font-size:15px;line-height:1.9;">另外注意这 4 个点排布的特殊之处：<b>横纵坐标相同的那两个点（(0,0) 和 (1,1)）是 A 类，坐标不同的那两个点（(1,0) 和 (0,1)）是 B 类</b>。这个"看两数是否相同"的规律后面要用到。</p>
+
+    <p style="font-weight:700;margin:14px 0 4px;">② 规则：这一版只准用"一条直线"</p>
+    <p style="font-size:15px;line-height:1.9;margin-top:0;">上面的结论把问题变成了一道几何题：能不能用一条直线把两类点分开。于是这一版把规则限死——<b>只准画一条直线</b>，用它把平面切成两半，规定其中半边判 A、另半边判 B。写成算式只有一行：</p>
+    <div class="formula small">n · x &gt; c &nbsp;?&nbsp; 是 → 判 A；&nbsp;否 → 判 B</div>
+    <p style="font-size:15px;line-height:1.9;"><b>符号逐个拆开：</b></p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>x = (x₁, x₂)</b>：要判的那个点的两个坐标，也就是"输入"。</li>
+      <li><b>n</b>：两个固定的数，写成 (n₁, n₂)。它决定直线朝哪个方向斜。</li>
+      <li><b>c</b>：一个固定的数，决定直线离原点多远（把它改大改小，就是整条线平移）。</li>
+      <li><b>n · x</b>：点乘，两边对应分量相乘再相加，即 n·x = n₁x₁ + n₂x₂，结果是<b>一个数</b>。</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.9;"><b>这个数 n·x 是什么？</b>点乘有几何含义：n·x ＝ |n| ×（点 x 在 n 所指方向上的投影长度），也就是"x 朝 n 这个方向伸出去多远"。而 |n| 只是个固定的放大倍数，把它折进门槛 c 里不改变判定，所以不妨直接把它读成：<b>看 x 在 n 方向上伸出多少；超过门槛 c 就判 A，没超过就判 B</b>。改变 n = 换一个投影方向（转动直线），改变 c = 挪门槛（平移直线）——这正好是下面两个滑块做的事。</p>
+    <p style="font-size:15px;line-height:1.9;">还有一点值得记：这套判定<b>只用到乘法和加法、再加一次比大小</b>，全程不需要人眼去看图。之所以还要把它画出来，只是为了让我们一眼数清分了几个。（严格说，n·x = c 是一条直线；n·x 大于 c 是直线的一侧、小于 c 是另一侧——这就是"用一条直线把平面切两半"的算式写法。）</p>
+
+    <p style="font-weight:700;margin:14px 0 4px;">③ 定义：什么叫"分开了"、"分对几个"</p>
+    <p style="font-size:15px;line-height:1.9;margin-top:0;">"数分对几个"这件事，写成明确的操作一共四步：</p>
+    <ol style="font-size:15px;line-height:1.9;">
+      <li>选定一条直线，也就是定下 n 和 c 这两个数；</li>
+      <li>把 4 个点<b>逐个</b>代入，各自算出 n·x，再和 c 比大小；</li>
+      <li>比出来的判定（A 或 B）与表里的真实类别对一下，相同算对、不同算错；</li>
+      <li>数一数对了几个——<b>对几个就是几分，满分 4 分</b>。</li>
+    </ol>
+    <p style="font-size:15px;line-height:1.9;">举个例子：若某条线把 4 个点依次判成 A、B、B、A，而真实是 A、A、B、B，那么 (0,0) 判对、(1,1) 判错、(1,0) 判对、(0,1) 判错——得分 2/4。</p>
+    <p style="font-size:15px;line-height:1.9;">如果 4 个全对（4/4），就说这条直线把这 4 个点<b>分开了</b>；这件事的正式术语是"这 4 个点是<b>线性可分</b>的"。所以"分开"这个词，指的<b>不是</b>把点挪到什么地方去，而是：<b>这条直线给出的判定，和 4 个点的真实标签完全一致</b>。只要有一条判错就没分开——这里没有"差不多分开了"这种中间状态。</p>
+
+    <div class="callout"><b>把这三步压缩成一句话</b>：所谓"用直线分类"，就是选两个数（n 和 c）定一条线；这条线判对了几个点、就是几分；<b>4 个点全判对，才叫"分开"</b>。接下来你要做的，就是把这条线调到 4/4。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">动手：你亲手调这条线，看能不能拿到 4 / 4</h3>
+    <p>蓝色 ○ = A 类，橙色 ◆ = B 类（标签同上面的表）。拖滑块改方向 θ 和位置 c，右边读数是"当前判对几个"（判错的点会标 ✗、变暗）。目标是 4/4——先自己试着调，调不出来再看下面的解释。</p>
+    <div class="xor-stage">
+      <svg id="xorSvg" viewBox="0 0 360 360"></svg>
+      <div class="xor-ctrl">
+        <div class="slider-wrap">
+          <span style="font-size:13px;color:var(--fg-2)">角度 θ</span>
+          <input type="range" id="xorTheta" min="0" max="179" step="1" value="30">
+          <span class="slider-val" id="xorThetaV">30°</span>
+        </div>
+        <div class="slider-wrap">
+          <span style="font-size:13px;color:var(--fg-2)">偏移 c</span>
+          <input type="range" id="xorOff" min="-100" max="200" step="1" value="50">
+          <span class="slider-val" id="xorOffV">0.50</span>
+        </div>
+        <div class="stat-row" style="margin-top:6px;">
+          <div class="stat"><div class="v" id="xorScore">? / 4</div><div class="k">分对的点数</div></div>
+        </div>
+        <p style="font-size:14px;color:var(--fg-2)">滑块 → 参数：n = (cos θ, sin θ)（θ 是上面那个角度），c 就是"偏移"读数。判定规则同 ②：算 n·x，大于 c 判 A，否则判 B。</p>
+        <button class="btn btn-primary" id="xorMapBtn">加一层 ReLU：h = [ReLU(x₁+x₂−0.5), ReLU(1.5−x₁−x₂)] →</button>
+        <button class="btn btn-ghost" id="xorBackBtn" style="display:none">← 退回原始空间</button>
+      </div>
+    </div>
+    <div class="callout" id="xorNote">你会发现：不管怎么转、怎么挪，<b>最多分对 3 个</b>。这不是你手残——下面证明给你看。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">为什么单条直线一定失败（严格证明）</h3>
+    <p style="font-size:15px;line-height:1.9;">把 ② 的判定改写成一个"打分函数"：<b>f(x) = n·x − c</b>。规则就是 f(x) &gt; 0 判 A、否则判 B（和上面完全等价，只是把比较移到了同一边）。</p>
+    <p style="font-size:15px;line-height:1.9;">把 4 个点逐个代进去，得到 4 个分数：A 类是 f(0,0) = −c 和 f(1,1) = n₁+n₂−c；B 类是 f(1,0) = n₁−c 和 f(0,1) = n₂−c。</p>
+    <div class="formula small">A 两点的分数之和 = (−c) + (n₁+n₂−c) = n₁+n₂−2c<br>B 两点的分数之和 = (n₁−c) + (n₂−c) = n₁+n₂−2c &nbsp;→&nbsp; <b>两者恒相等</b></div>
+    <p style="font-size:15px;line-height:1.9;">几何上更好记：<b>A 两点的中点 = B 两点的中点 = (0.5, 0.5)</b>——两条"同类的连线"在这个点交叉，所以任何一条直线都躲不开它。</p>
+
+    <figure class="fig">
+      <svg viewBox="0 0 680 360" role="img" aria-label="XOR 四个点，两条对角线在中心交叉">
+        <!-- 外框 -->
+        <rect x="120" y="40" width="440" height="280" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- 同类连线（对角线） -->
+        <line x1="120" y1="320" x2="560" y2="40" stroke="#38bdf8" stroke-width="2" stroke-dasharray="7 5" opacity=".7"/>
+        <line x1="560" y1="320" x2="120" y2="40" stroke="#fbbf24" stroke-width="2" stroke-dasharray="7 5" opacity=".7"/>
+        <!-- 坐标轴标注 -->
+        <text x="112" y="338" font-size="13" fill="var(--fg-3)">(0,0)</text>
+        <text x="524" y="360" font-size="13" fill="var(--fg-3)">(1,0)</text>
+        <text x="524" y="34" font-size="13" fill="var(--fg-3)">(1,1)</text>
+        <text x="112" y="34" font-size="13" fill="var(--fg-3)">(0,1)</text>
+        <!-- 中心交叉点 -->
+        <circle cx="340" cy="180" r="7" fill="var(--err)"/>
+        <text x="352" y="176" font-size="14" font-weight="700" fill="var(--err)">(0.5, 0.5)</text>
+        <text x="352" y="196" font-size="12" fill="var(--fg-3)">两条中点重合于此</text>
+        <!-- 四个数据点：A 类圆 -->
+        <circle cx="120" cy="320" r="11" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="3"/>
+        <text x="104" y="316" font-size="14" font-weight="700" fill="#38bdf8">A</text>
+        <circle cx="560" cy="40" r="11" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="3"/>
+        <text x="578" y="44" font-size="14" font-weight="700" fill="#38bdf8">A</text>
+        <!-- B 类方块 -->
+        <rect x="549" y="309" width="22" height="22" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="3"/>
+        <text x="578" y="326" font-size="14" font-weight="700" fill="#fbbf24">B</text>
+        <rect x="109" y="29" width="22" height="22" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="3"/>
+        <text x="76" y="44" font-size="14" font-weight="700" fill="#fbbf24">B</text>
+        <!-- 说明文字 -->
+        <text x="120" y="345" font-size="12" fill="var(--fg-2)">蓝虚线：两个 A 点的连线　橙虚线：两个 B 点的连线</text>
+      </svg>
+      <figcaption><b>XOR 四点与它的"死结"。</b>四个点摆成一个正方形，两个对角上的点是 A 类（蓝色圆），另外两个对角是 B 类（橙色方块）。把 <b>两个 A 点连起来</b>（蓝虚线）和 <b>两个 B 点连起来</b>（橙虚线），两条线在正方形正中心 (0.5, 0.5) 相交。这就是四条对角线的中点<u>重合于一点</u>——也就是前面算式里"A 两点分数之和 = B 两点分数之和"的几何图像。任何一条直线想分开两类，就必须让 A 类全部落在线的一侧、B 类全部落在另一侧；但两个中点重合，A、B 各自的"重心"在同一处，线无论怎么摆都做不到。这就是线性不可分的几何证明。</figcaption>
+    </figure>
+    <p style="font-size:15px;line-height:1.9;">现在假设 4 个点<b>全判对</b>：A 两点都要大于 0，它俩的分数之和就该大于 0；B 两点都要 ≤ 0，它俩之和就该 ≤ 0。可上面刚算出这两个和<b>恒相等</b>，不可能一个正一个非正——矛盾。<br>所以结论是：<b>无论 n、c 取什么值，至少错一个</b>。单条直线的错误率下限 = 1/4 = <b>25%</b>，与数据量、训练时长、学习率全都无关——这是"用一条直线"这整个模型类（model class）的天花板。</p>
+    <p style="font-size:13px;color:var(--fg-3);line-height:1.7;">（注：这个证明能拿"分数之和"下手，是因为 4 个点中心对称——A、B 各占一条对角线且共用中点。换一组别的点，"把它们投影到某个一维轴上再用阈值切"这种写法就未必成立，不能照搬。）</p>
+    <p style="font-size:15px;line-height:1.9;">这就是 slides 对第一代神经分类器动机的原话：传统 softmax 分类器只学权重 W、输入特征 x 是固定的（"the input representation is fixed"），决策边界是线性的，<i>"which can be limiting"</i>。XOR 是这个 "limiting" 的最小标本——它需要的判定函数对输入<b>不再是线性的</b>（在二维图上，这表现为边界不再是一条直线）。</p>
+    <div class="callout">上面按钮里藏着解法的全部思想：<b>先把点非线性映射到另一个空间，再在那个空间画直线。</b>映射后 A 两点落在 (0, 1.5) 与 (1.5, 0)，B 两点一起压到 (0.5, 0.5)——一条直线轻松切开。这个"映射"就是一个隐藏层。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">这个结论值得单独说：它是"天花板"，不是"还不够努力"</h3>
+    <p style="font-size:15px;line-height:1.9;">看到"最多只能 3 分"，最容易冒出来的念头有三个：把角度再调刁钻一点、让计算机把所有直线都试一遍、或者多给几个数据。这三条在这道题里<b>全都无效</b>，而且原因完全一样——问题不在"有没有找到那条好线"，而在<b>"直线"这个工具本身不够用</b>：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>换个角度？</b> 上面的证明是对<b>任意</b> n、c 都成立的，不是"暂时没想到好角度"，而是好角度压根不存在。</li>
+      <li><b>多试几遍？</b> 把所有可能的直线挨个试完，最好结果还是 3 分。搜索只能帮你找到最优点，改不了最优值的天花板。</li>
+      <li><b>多给数据？</b> 这 4 个点就是全部数据；再多加点也改不掉"两类点沿对角线交叉"这个排布。</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.9;">所以那个 25% 的错误率下限，和训练时长、学习率、数据量<b>统统无关</b>——它由"只准用一条直线"这条规定直接决定。机器学习里给这件事起了个名字：<b>模型类</b>（model class）的<b>表达能力上限</b>。意思是：你先规定了"只允许用某种形状的边界"，也就同时规定了"最好能做到多好"。这个现象在整门课里会反复出现——很多时候模型效果上不去，不是参数没调好，而是选的模型根本表达不出你要的东西。</p>
+    <p style="font-size:15px;line-height:1.9;">打个比方：这就像拿一把直尺去画正圆。不是尺子不够长，也不是你手不稳，而是"直尺只能画直线"这件事本身决定了画不出圆。想画圆得换圆规；想让判定函数不再是线性的，就得换模型——这正是场景 2 要做的事。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">第二个死穴：输入表示是"别人给定"的，不随任务改变</h3>
+    <p style="font-size:15px;line-height:1.9;">第一个死穴是边界只能直。还有第二个，藏得更深一层：<b>送进分类器的那个特征向量，本身是怎么来的、能不能改？</b></p>
+    <p style="font-size:15px;line-height:1.9;">K01 的做法是：先用"预测邻居"这个目标把词向量训练好，然后<b>冻结</b>——之后做任何下游任务（情感分类、句法分析、……），都直接拿这套向量当输入；分类器只负责在它上面画一条线，永远不去动这些向量。</p>
+    <p style="font-size:15px;line-height:1.9;">为什么这算问题？因为"什么样的向量算好向量"这件事，<b>取决于你要解决什么任务</b>。"预测邻居"这个目标，逼着向量去记住"哪些词经常一起出现"；但下游任务若是判断"这句话是好评还是差评"，它更想取用的可能是"褒贬倾向"这类信息。两个需求并不一致——为一个目标学出来的表示，未必把另一个任务需要的信息放在容易取用的位置上。</p>
+    <p style="font-size:15px;line-height:1.9;">打个比方：这相当于把原料提前加工成固定的半成品，再分发给所有车间。只要各车间要的东西不一样，就总有人拿到不合用的半成品，而且没有任何一道工序能回头去改它。<b>特征一旦冻死，任务就再也影响不了特征</b>——这就是"特征和任务脱节"。</p>
+    <p style="font-size:15px;line-height:1.9;">slides 给出的神经分类器定义，恰好在这两点上反过来：(a) <b>同时学习权重 W 和词表示</b>——表示也被当成可训练参数，跟着任务的损失一起被梯度更新；(b) <b>用更多层反复"重新表示"数据</b>，从而得到非线性的分类器。第一条破的是"特征冻死"，第二条破的是"边界只能直"。本章剩下的内容，就是把这两条从口号变成能一步一步算出来的机制。</p>
+  </div>
+
+  <div class="checkpoint" data-check="cp1">
+    <div class="cp-head">◈ 检验点 1 · 先动手再答</div>
+    <div>XOR 四个点上，单条直线最多能分对几个点？（把滑块拖到极限试试）</div>
+    <div class="quiz-opt" data-v="0">A. 4 个——只要角度足够刁钻</div>
+    <div class="quiz-opt" data-v="1">B. 3 个——A 两点的连线与 B 两点的连线在 (0.5,0.5) 交叉，线性不可分</div>
+    <div class="quiz-opt" data-v="2">C. 2 个——跟瞎猜一样</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 2 · 神经元与塌缩
+============================================================ -->
+<section class="scene" data-scene="2">
+  <header class="scene-header">
+    <span class="step-label">场景 02 · 直觉</span>
+    <h2 class="scene-title">直线摆不平：把"线性"换成"非线性"，边界才不再是直线</h2>
+    <p class="scene-lead">场景 1 把"直线摆不平"这件事钉死了。要救它，唯一的路是<b>让判定函数对输入的依赖不再是线性的</b>——一旦不再是线性函数，判定边界自然就不再被限制成直线。这一节从零把这个"最小零件"造出来，最后一步才给它起名字。<b>先提醒一句：后面会说清"边界变弯/变折"只是非线性的一个外观，不是非线性本身。</b></p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">第一步：把"一个分数"变成"两个分数"，再各自压零</h3>
+    <p style="font-size:15px;line-height:1.9;">场景 1 的判定只算<b>一个</b>分数（n·x − c），然后看它正负。现在我们同时算<b>两个</b>——但请注意，这两个分数每一个都还是最普通的"加权求和再平移"，一点新东西都没引入；新鲜的地方在"怎么把两个分数组合起来用"，下一步再说。先用 XOR 的 4 个点，就取下面这两个分数：</p>
+    <div class="formula small">u = x₁ + x₂ − 0.5 &nbsp;&nbsp;&nbsp;&nbsp; v = 1.5 − x₁ − x₂</div>
+    <p style="font-size:15px;line-height:1.9;"><b>这两个分数不是随手挑的，来历值得说清。</b>先看 4 个点的 x₁+x₂ 这个和：四个点分别是 0、1、1、2——<b>A 类两点取到两端的 0 和 2，B 类两点都取中间的 1</b>。所以如果只盯着"和"这一个数，A 分在两头、B 夹在中间，光靠"切一个门槛"同样切不开。（这正对应场景 1 里那句"两类沿对角线交叉"的画面。）换个思路：不做"切一刀"，改做"折两道"——用两个门槛不同的分数各自盯住一段区间。u = s − 0.5 在 s 超过 0.5 时为正；v = 1.5 − s 在 s 低于 1.5 时为正。这两个门槛（0.5 和 1.5）把 B 类所在的 s = 1 <b>夹在了中间</b>：在 s = 1 处，u = 0.5 &gt; 0、v = 0.5 &gt; 0，两个分数<b>同时为正</b>；而 A 类所在的 s = 0 和 s = 2，各自只有一个分数为正。也就是说，这一对分数已经把"A 在两端、B 在中间"这件事编码成了"两个数里，是两个都正、还是只有一个正"。</p>
+    <p style="font-size:15px;line-height:1.9;">现在把 4 个点代进去算。表里最后一列，是对两个分数各做一步处理：<b>负数一律压成 0，正数原样保留</b>（这个操作记为 max(·, 0)；先只管它做的事，正式名字下一段再给）：</p>
+    <table class="cmp" style="max-width:640px;">
+      <tr><th>点（真实类别）</th><th>u</th><th>v</th><th>处理后：(max(u,0), max(v,0))</th></tr>
+      <tr><td class="mono">(0, 0)　A</td><td class="mono">−0.5</td><td class="mono">1.5</td><td class="mono">(0, 1.5)</td></tr>
+      <tr><td class="mono">(1, 1)　A</td><td class="mono">1.5</td><td class="mono">−0.5</td><td class="mono">(1.5, 0)</td></tr>
+      <tr><td class="mono">(1, 0)　B</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">(0.5, 0.5)</td></tr>
+      <tr><td class="mono">(0, 1)　B</td><td class="mono">0.5</td><td class="mono">0.5</td><td class="mono">(0.5, 0.5)</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;">先逐行验算，确认这张表可信。第一行 (0,0)：u = 0+0−0.5 = −0.5，v = 1.5−0−0 = 1.5；压零后 (−0.5→0，1.5 保持)，得到 (0, 1.5)。第二行 (1,1)：u = 1+1−0.5 = 1.5，v = 1.5−1−1 = −0.5；压零后 (1.5, 0)。第三、四行的 (1,0) 与 (0,1) 和都是 1，于是 u = 0.5、v = 0.5，两个都是正数，压零前后一个样——这就是为什么两个 B 点会落到<b>同一个位置</b>。整个变换里没有用到任何"看图"的步骤，全是最普通的算术。</p>
+    <p style="font-size:15px;line-height:1.9;">再读这张表的含义：处理前，A、B 两类混在一起；处理之后，<b>两个 A 点被推到 (0, 1.5) 和 (1.5, 0) 两个犄角，两个 B 点一起落到正中间的 (0.5, 0.5)</b>。原本"一条直线切不开"的一堆点，只是在换了一次坐标之后，就变得能一刀切开了。场景 1 里那个"加一层 ReLU"按钮，做的正是这一步。</p>
+    <div class="callout">把这个动作的效果记牢：<b>它把"直线切不开"的排布，改写成了"直线切得开"的排布。</b>代价并不大——每个点还是 2 个数，维度没变，变的只是这些数怎么摆。这就是"非线性"在这道题里的具体作用：<b>先在原空间里做一次非线性改写（这一步就是隐藏层在干的事），再在新空间里画一条直线；这条直线映射回原空间，就不再是一条直线了（ReLU 下是折线）。</b></div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 680 330" role="img" aria-label="非线性映射前后：左图四点混在一起，右图一条直线即可切开">
+        <defs>
+          <marker id="arw3" markerWidth="10" markerHeight="10" refX="7" refY="3.2" orient="auto">
+            <path d="M0,0 L7,3.2 L0,6.4 z" fill="var(--fg-2)"/>
+          </marker>
+        </defs>
+        <!-- 左：原空间 -->
+        <text x="70" y="30" font-size="14" font-weight="700" fill="var(--fg)">① 原空间 (x₁, x₂)</text>
+        <text x="70" y="50" font-size="12" fill="var(--fg-3)">一条直线切不开</text>
+        <rect x="60" y="140" width="130" height="130" fill="none" stroke="var(--border)"/>
+        <circle cx="60" cy="270" r="10" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.6"/>
+        <circle cx="190" cy="140" r="10" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.6"/>
+        <rect x="183" y="263" width="15" height="15" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.6"/>
+        <rect x="53" y="133" width="15" height="15" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.6"/>
+        <text x="66" y="118" font-size="12" fill="#38bdf8">A(1,1)</text>
+        <text x="198" y="288" font-size="12" fill="#fbbf24">B(1,0)</text>
+        <!-- 中间的映射箭头 -->
+        <line x1="230" y1="205" x2="360" y2="205" stroke="var(--fg-2)" stroke-width="2.4" marker-end="url(#arw3)"/>
+        <text x="228" y="192" font-size="12" fill="var(--fg-2)">非线性改写</text>
+        <text x="228" y="228" font-size="11" fill="var(--fg-3)">（隐藏层）</text>
+        <!-- 右：映射后空间 -->
+        <text x="390" y="30" font-size="14" font-weight="700" fill="var(--fg)">② 换坐标之后 (max(u,0), max(v,0))</text>
+        <text x="390" y="50" font-size="12" fill="var(--fg-3)">一条直线就切开了</text>
+        <line x1="390" y1="270" x2="560" y2="270" stroke="var(--border)" stroke-width="1.2"/>
+        <line x1="390" y1="270" x2="390" y2="110" stroke="var(--border)" stroke-width="1.2"/>
+        <!-- 分界线 -->
+        <line x1="390" y1="157" x2="513" y2="290" stroke="var(--fg)" stroke-width="2.6" stroke-dasharray="8 5"/>
+        <!-- A 两点到犄角 -->
+        <circle cx="390" cy="135" r="10" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.6"/>
+        <circle cx="525" cy="270" r="10" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.6"/>
+        <text x="404" y="132" font-size="12" fill="#38bdf8">A (0,1.5)</text>
+        <text x="470" y="256" font-size="12" fill="#38bdf8">A (1.5,0)</text>
+        <!-- B 两点合并到中心 -->
+        <rect x="428" y="218" width="15" height="15" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.6"/>
+        <text x="450" y="231" font-size="12" fill="#fbbf24">B 两点重合 (0.5,0.5)</text>
+        <text x="390" y="315" font-size="12" fill="var(--fg-3)">A 类全在线的上方，B 类在下方 → 可分</text>
+      </svg>
+      <figcaption><b>同一批点，换一次坐标就从"切不开"变成"切得开"。</b>左图是原始四点混在一起，任何一条直线都切不开（场景 1 的结论）。把每个点按 (x₁,x₂) ↦ (max(u,0), max(v,0)) 搬到新坐标后（右图），两个 A 点被推到上面的两个角、两个 B 点重合到中间，这时画一条直线（黑虚线）就轻松分开。注意：<b>边界之所以变了，是因为坐标变换本身是非线性的（含 max），不是因为"线被掰弯了"</b>——线在新空间里仍是直的。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">第二步：给刚才这个零件起名字</h3>
+    <p style="font-size:15px;line-height:1.9;">上面这套操作——<b>算一组加权和（各自的权重和偏移）→ 每个分量过一遍"负数压零"</b>——是最小的一个处理零件。它的两半各有正式名字：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>前半：加权和 + 平移</b>。多个分数一起写就是 <span class="msym">z = Wx + b</span>（W 是权重、b 是平移量）。这类"先乘 W 再平移 b"的操作，数学上统称<b>仿射变换</b>——这里只需记住它做的事：加权求和 + 平移，没有别的花样。</li>
+      <li><b>后半：负数压零</b>。这个固定不变的函数写成 <span class="msym">f(·) = max(·, 0)</span>，名字叫 <b>ReLU</b>。它属于一类叫<b>非线性激活</b>的函数——"非线性"是说它不是"输入乘个倍数"那种直来直去的关系；"激活"是借生物神经元的说法。这一步的意义是<b>让整个判定函数不再是线性的</b>（几何上，这是"边界不再只能是直线"的根源）。</li>
+    </ul>
+    <div class="formula">h = f(Wx + b) ＝ f(z)</div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 680 220" role="img" aria-label="一个神经元：输入经加权和与平移，再过负数压零，得到输出">
+        <defs>
+          <marker id="arw4" markerWidth="10" markerHeight="10" refX="7" refY="3.2" orient="auto">
+            <path d="M0,0 L7,3.2 L0,6.4 z" fill="var(--fg-2)"/>
+          </marker>
+        </defs>
+        <!-- 输入节点 -->
+        <circle cx="66" cy="56" r="17" fill="var(--bg-3)" stroke="var(--border)"/>
+        <circle cx="66" cy="110" r="17" fill="var(--bg-3)" stroke="var(--border)"/>
+        <circle cx="66" cy="164" r="17" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="60" y="61" font-size="14" fill="var(--fg)">x₁</text>
+        <text x="60" y="115" font-size="14" fill="var(--fg)">x₂</text>
+        <text x="60" y="169" font-size="14" fill="var(--fg)">x₃</text>
+        <!-- 连边（带权重） -->
+        <line x1="83" y1="56" x2="200" y2="100" stroke="var(--fg-3)" stroke-width="1.6"/>
+        <line x1="83" y1="110" x2="200" y2="110" stroke="var(--fg-3)" stroke-width="1.6"/>
+        <line x1="83" y1="164" x2="200" y2="120" stroke="var(--fg-3)" stroke-width="1.6"/>
+        <text x="132" y="70" font-size="12" fill="var(--fg-3)">w₁</text>
+        <text x="136" y="104" font-size="12" fill="var(--fg-3)">w₂</text>
+        <text x="132" y="156" font-size="12" fill="var(--fg-3)">w₃</text>
+        <!-- 仿射框 -->
+        <rect x="200" y="80" width="150" height="60" rx="10" fill="var(--bg-3)" stroke="var(--accent)" stroke-width="1.6"/>
+        <text x="275" y="116" font-size="15" text-anchor="middle" fill="var(--fg)">z = Wx + b</text>
+        <text x="275" y="160" font-size="12.5" text-anchor="middle" fill="var(--accent-2)">① 加权和 + 平移（仿射）</text>
+        <!-- 箭头 -->
+        <line x1="350" y1="110" x2="400" y2="110" stroke="var(--fg-2)" stroke-width="2.4" marker-end="url(#arw4)"/>
+        <!-- ReLU 框 -->
+        <rect x="410" y="80" width="130" height="60" rx="10" fill="var(--bg-3)" stroke="var(--ok)" stroke-width="1.6"/>
+        <text x="475" y="116" font-size="15" text-anchor="middle" fill="var(--fg)">max(z, 0)</text>
+        <text x="475" y="160" font-size="12.5" text-anchor="middle" fill="var(--ok)">② 负数压零（ReLU）</text>
+        <!-- 箭头 -->
+        <line x1="540" y1="110" x2="590" y2="110" stroke="var(--fg-2)" stroke-width="2.4" marker-end="url(#arw4)"/>
+        <circle cx="618" cy="110" r="17" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="612" y="115" font-size="14" fill="var(--fg)">h</text>
+      </svg>
+      <figcaption><b>一个"神经元"就是把这两个固定动作串起来。</b>左边一排输入各自乘一个权重（w₁、w₂、w₃）再相加、加平移 b，得到 z = Wx + b（框①，仿射）；再对每个分量做"负数压零" max(z, 0)（框②，ReLU）；最后输出 h。<b>框① 是线性的，框② 是非线性的——把它俩叠在一起，整个东西对输入就不再是线性的，"神经元"这个名字就是这一整套的简称。</b></figcaption>
+    </figure>
+
+    <p style="font-size:15px;line-height:1.9;">合在一起，这整个零件叫一个<b>神经元（neuron）</b>。<b>为什么叫这个名</b>：生物神经元确实也是"把一堆输入加权求和、超过阈值才发放信号"，这个零件取了那个比喻里最粗的一层壳（加权和 + 一个开关），跟真实神经元差得很远——名字是历史留下的，别照字面理解。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>再往上搭一层：</b>一排这样的零件共用同一个 W（每个零件用 W 的一行），就叫<b>一层</b>；几层首尾相接，就是常说的<b>前馈网络 / MLP（多层感知机）</b>。本章要算梯度的这个两层小网络，展开就是：</p>
+    <div class="formula small">x → z₁ = W₁x + b₁ → h = ReLU(z₁) → z₂ = W₂h + b₂ → p = softmax(z₂) → L</div>
+    <p style="font-size:13px;color:var(--fg-3);line-height:1.7;">（其中 softmax(·) 是把一组数变成一组概率，场景 6 细讲；L 是"损失"，一个衡量预测与答案差多少的数。整章后面都在算"每个参数对 L 的贡献"。）</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">那句"负数压零"能不能省掉？——实测：省不掉</h3>
+    <p style="font-size:15px;line-height:1.9;">很自然会想：既然每一层都是"加权和 + 平移"，那干脆别要那步压零，直接多堆几层，边界不就更复杂了？答案是<b>不会，一层都不会多</b>。理由是一行矩阵乘法：两层都没有压零时，f(x) = W₂(W₁x)；由矩阵乘法的结合律，W₂(W₁x) = (W₂W₁)x，而 W₂W₁ 本身还是一个矩阵——<b>两层等价于一层</b>。</p>
+    <div class="formula small">W₂(W₁x) = (W₂W₁)x = W′x —— 两层 ≡ 一个矩阵</div>
+    <p style="font-size:15px;line-height:1.9;">把它讲透：矩阵乘法满足结合律，也就是说"先乘 W₁、再乘 W₂"和"先把 W₁、W₂ 乘成一个新矩阵 W′ = W₂W₁、再拿 W′ 去乘"，结果完全相同。而 W′ 本身<b>还是一个最普通的矩阵</b>——于是"过 W₁ 再过 W₂"这两步，可以被"一步过 W′"彻底替代。三层、四层乃至一百层同理，一路压下去还是一个矩阵。结论：<b>只要层与层之间不插入任何非线性的东西，层数就是摆设</b>，堆得再多也等于一层，而参数量却实打实地涨上去了。</p>
+    <p style="font-size:14px;color:var(--fg-2)">本机实跑对账（W₁∈R<sup>4×3</sup>, W₂∈R<sup>2×4</sup>, x∈R³，随机初始化）：</p>
+    <table class="num">
+      <tr><th>计算方式</th><th>输出</th><th>对比</th></tr>
+      <tr><td>两层分别算 W₂(W₁x)</td><td class="mono">[0.201359, 0.560198]</td><td rowspan="2" style="text-align:left;">max|差| = <b>3.33×10⁻¹⁶</b><br>（= 浮点机器精度，即"完全相同"）</td></tr>
+      <tr><td>合成单矩阵 (W₂W₁)x</td><td class="mono">[0.201359, 0.560198]</td></tr>
+      <tr><td>中间插 ReLU：W₂·ReLU(W₁x)</td><td class="mono">[−1.986808, 0.656412]</td><td style="text-align:left;">差 = <b>[−2.188, 0.096]</b>，不再相等</td></tr>
+    </table>
+    <div class="callout"><b>没有那步"负数压零"，深度网络不比单个线性变换多任何东西</b>（slides p17）。100 层线性 = 1 层线性：参数量涨了 100 倍，能表达的函数一个没多。ReLU 往中间一插，结合律立刻失效——"深度"这个词从这一刻起才有意义。</div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 680 210" role="img" aria-label="两层线性等价于一层，插入 ReLU 后不再等价">
+        <defs>
+          <marker id="arw5" markerWidth="10" markerHeight="10" refX="7" refY="3.2" orient="auto">
+            <path d="M0,0 L7,3.2 L0,6.4 z" fill="var(--fg-2)"/>
+          </marker>
+        </defs>
+        <!-- 上排：无非线性，可合并 -->
+        <text x="30" y="38" font-size="13" fill="var(--fg-2)">无 ReLU</text>
+        <text x="46" y="80" font-size="14" fill="var(--fg)">x</text>
+        <line x1="60" y1="74" x2="120" y2="74" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <rect x="122" y="52" width="80" height="44" rx="8" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="162" y="80" font-size="14" text-anchor="middle" fill="var(--fg)">W₁ x</text>
+        <line x1="204" y1="74" x2="252" y2="74" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <rect x="254" y="52" width="80" height="44" rx="8" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="294" y="80" font-size="14" text-anchor="middle" fill="var(--fg)">W₂ (·)</text>
+        <line x1="336" y1="74" x2="384" y2="74" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <text x="392" y="80" font-size="14" fill="var(--ok)">= W′x</text>
+        <text x="470" y="70" font-size="12.5" fill="var(--ok)">两层 ≡ 一层（结合律）</text>
+        <text x="470" y="90" font-size="12" fill="var(--fg-3)">W′ = W₂W₁ 仍是一个矩阵</text>
+        <!-- 分隔线 -->
+        <line x1="30" y1="108" x2="650" y2="108" stroke="var(--border)" stroke-dasharray="4 4"/>
+        <!-- 下排：有 ReLU，不可合并 -->
+        <text x="30" y="146" font-size="13" fill="var(--fg-2)">有 ReLU</text>
+        <text x="46" y="185" font-size="14" fill="var(--fg)">x</text>
+        <line x1="60" y1="179" x2="112" y2="179" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <rect x="114" y="157" width="72" height="44" rx="8" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="150" y="185" font-size="14" text-anchor="middle" fill="var(--fg)">W₁ x</text>
+        <line x1="188" y1="179" x2="228" y2="179" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <rect x="230" y="157" width="72" height="44" rx="8" fill="var(--bg-3)" stroke="var(--ok)"/>
+        <text x="266" y="185" font-size="14" text-anchor="middle" fill="var(--fg)">ReLU</text>
+        <line x1="304" y1="179" x2="344" y2="179" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <rect x="346" y="157" width="80" height="44" rx="8" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="386" y="185" font-size="14" text-anchor="middle" fill="var(--fg)">W₂ (·)</text>
+        <line x1="428" y1="179" x2="476" y2="179" stroke="var(--fg-2)" stroke-width="2" marker-end="url(#arw5)"/>
+        <text x="484" y="185" font-size="14" fill="var(--err)">≠ 单层</text>
+        <text x="556" y="185" font-size="12.5" fill="var(--err)">结合律失效</text>
+      </svg>
+      <figcaption><b>"深度"只在插入非线性之后才有意义。</b>上排：两层纯线性 W₂(W₁x) 由结合律等于 (W₂W₁)x＝W′x，W′ 还是一个普通矩阵，所以两层被压成一层。下排：中间插一个 ReLU，W₂·ReLU(W₁x) 再没有"合成一个矩阵"的写法，层数才真正带来新表达能力。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">"压零"到底改变了什么：把"直线"换成"折线"——一个必须先纠正的说法</h3>
+    <p style="font-size:15px;line-height:1.9;">前面几处顺口说"让边界拐弯"，这个说法<b>不准确，得当场纠正</b>：<b>"非线性"不等于"边界弯"</b>。这两件事一个是<b>原因</b>、一个是<b>某种结果</b>，不能画等号。把话说准，分三层：</p>
+    <p style="font-size:15px;line-height:1.9;"><b>第一层（真正起作用的判据）：看判定函数对输入 x 是不是线性的。</b>场景 1 的判定是 f(x) = n·x − c，这是 x 的<u>线性函数</u>（只含 x 的一次项）；线性函数取等号的解集必是直线。反过来，<b>只要判定函数里出现了"不是 x 的一次项"的东西</b>（比如 max、平方、相乘），它就不再是线性函数，边界也就不再被强制成一条直线。所以真正决定边界形状的，是"判定函数是不是线性的"，<u>不是"弯不弯"</u>。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>第二层（"压零"具体制造了哪种非线性）：它制造的是"分段"，不是"平滑弯曲"。</b>ReLU(x₁+x₂−0.5) 这个操作，把空间按"括号里的数等于 0"分成两半：一半照原样、一半压成 0。于是它给出的边界是一段一段的<u>直线</u>拼起来的<b>折线</b>——每一段本身都还是直的，只是段与段之间接了个"折角"。这跟圆滑的曲线是两回事。真正的光滑曲线要 sgn 之外的 Sigmoid / tanh 那类激活才会出现。<b>所以对 ReLU 网络，准确的说法是"分段线性 / 折线边界"，不是"弯的边界"。</b></p>
+    <figure class="fig">
+      <svg viewBox="0 0 680 300" role="img" aria-label="平滑曲线边界与折线边界对比">
+        <defs>
+          <marker id="arw2" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto">
+            <path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/>
+          </marker>
+        </defs>
+        <!-- 左：光滑曲线 -->
+        <text x="110" y="26" font-size="14" font-weight="700" fill="var(--fg)">光滑曲线边界</text>
+        <text x="110" y="46" font-size="12" fill="var(--fg-3)">sigmoid / tanh 类激活</text>
+        <line x1="40" y1="230" x2="300" y2="230" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw2)"/>
+        <line x1="40" y1="230" x2="40" y2="70" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw2)"/>
+        <path d="M45,220 C120,220 130,110 210,100 C260,94 275,90 295,88" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <circle cx="90" cy="150" r="7" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.2"/>
+        <circle cx="200" cy="180" r="7" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.2"/>
+        <rect x="110" y="90" width="13" height="13" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.2"/>
+        <rect x="240" y="150" width="13" height="13" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.2"/>
+        <!-- 右：折线边界 -->
+        <text x="420" y="26" font-size="14" font-weight="700" fill="var(--fg)">折线（分段直线）边界</text>
+        <text x="420" y="46" font-size="12" fill="var(--fg-3)">ReLU 类激活</text>
+        <line x1="360" y1="230" x2="650" y2="230" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw2)"/>
+        <line x1="360" y1="230" x2="360" y2="70" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw2)"/>
+        <polyline points="365,220 440,150 500,190 570,95 640,86" fill="none" stroke="var(--accent)" stroke-width="3"/>
+        <circle cx="400" cy="170" r="7" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.2"/>
+        <circle cx="530" cy="220" r="7" fill="rgba(56,189,248,.25)" stroke="#38bdf8" stroke-width="2.2"/>
+        <rect x="470" y="100" width="13" height="13" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.2"/>
+        <rect x="600" y="140" width="13" height="13" fill="rgba(251,191,36,.22)" stroke="#fbbf24" stroke-width="2.2"/>
+        <circle cx="440" cy="150" r="4" fill="var(--fg-2)"/>
+        <text x="448" y="146" font-size="11" fill="var(--fg-3)">折角</text>
+      </svg>
+      <figcaption><b>两种"非直线的边界"长得完全不一样。</b>左边用 sigmoid/tanh 这类平滑激活，边界是光滑曲线；右边用 ReLU，边界是几段直线拼成的折线（黑点处是折角）。两者都<b>不是直线</b>、都能解决 XOR，但把它们都叫"弯的"就把这个区别抹掉了。<b>准确的说法：是判定函数从"线性"变成了"非线性"，具体长成哪种形状，取决于用了哪种非线性。</b></figcaption>
+    </figure>
+    <p style="font-size:15px;line-height:1.9;"><b>第三层（对 XOR 到底发生了什么）：把那 4 个点摆到"另一个角度看"。</b>回到场景 1：XOR 之所以解不掉，是因为在同一平面上、用直线的眼睛看，A 两点和 B 两点永远混在一起。上一张表做的事，等价于<b>把每个点搬到一组新坐标 (max(u,0), max(v,0)) 上去</b>。这组新坐标里，"算 A 还是算 B"恰好等于"一个新线性判定"——于是又回到了一条直线。也就是说：<b>不是把边界扭弯了，而是先把"评判标准"做了一个非线性变换，然后在变换后的世界画一条直路。</b></p>
+    <div class="callout"><b>一句话收住这几层：</b>线性分类器病在"判定函数对输入是线性的"；ReLU 这类激活的作用，是让判定函数<b>不再是线性</b>。至于边界最后长成折线还是曲线，是"用了哪种非线性"的后果，不是定义。<b>别把"能弯"当成"非线性"的同义词——它只是非线性会带来的众多表现之一。</b></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">顺带记一个词：表示学习</h3>
+    <p style="font-size:15px;line-height:1.9;">还有一个以后会反复出现的说法：<b>表示学习</b>。它的意思是——网络不只是学最后那层权重，输入那串数（在这里就是词向量 x）<b>本身也参与更新</b>。落到这章的算式里非常具体：词向量 x 也会出现在梯度 ∂L/∂x 里（场景 3 会算出它），于是它和权重一样被 SGD 修改。K01 那种"词向量先训好、再冻住给下游用"的割裂，从这一章起被打破。</p>
+  </div>
+
+  <div class="checkpoint" data-check="cp2">
+    <div class="cp-head">◈ 检验点 2</div>
+    <div>三层线性网络 W₃(W₂(W₁x)) 等价于什么？</div>
+    <div class="quiz-opt" data-v="0">A. 一个三次多项式</div>
+    <div class="quiz-opt" data-v="1">B. 一个单矩阵线性变换 W′x，其中 W′=W₃W₂W₁</div>
+    <div class="quiz-opt" data-v="2">C. 无法化简，层数就是表达能力</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 3 · 计算图：一次完整的前向+反向
+============================================================ -->
+<section class="scene" data-scene="3">
+  <header class="scene-header">
+    <span class="step-label">场景 03 · 动手</span>
+    <h2 class="scene-title">最小的完整例子：前向算出 1.0，反向算出每个参数的梯度</h2>
+    <p class="scene-lead">场景 2 把网络讲成了"线性运算叠非线性运算"，写作一行是一串嵌套括号。可这一行本身没法直接下手求导。本节先解释一个专门为"给嵌套函数求导"发明的工具——<b>计算图</b>，然后拿一个最小的两层网络，从前向到反向，把每一个数都手算一遍、再逐个对账。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先搞清楚：什么是"计算图"，为什么求导非要有它</h3>
+    <p style="font-size:15px;line-height:1.9;">把章节开头那个网络再写一遍，它长这样：</p>
+    <div class="formula small">L = L( softmax( W₂ · ReLU( W₁x + b₁ ) + b₂ ) )</div>
+    <p style="font-size:15px;line-height:1.9;"><b>这是一串"复合"：</b>先算 W₁x+b₁，得到的结果喂给 ReLU，再喂给 W₂，再喂给 softmax，最后算损失 L。像洋葱一样，一层包一层。麻烦在于——<b>求导要从最外层往回剥，一路乘过去</b>。可光盯着这行括号，人会立刻冒出三个问题：往回剥的顺序是什么？每剥一层乘的"局部导数"是哪一个？中间算出来的数要不要留着？</p>
+    <p style="font-size:15px;line-height:1.9;"><b>计算图就是为回答这三个问题发明的。</b>做法很朴素：把复合函数里每一个"基本运算"（一次加法、一次乘法、一次 max、一次矩阵乘……）拆成一个独立的节点；某个运算用到了谁的结果，就从谁那里连一条箭头过去。拆完之后，这串括号就变成了一张<b>有向无环图</b>——这就是计算图。它把"给一串嵌套函数求导"这件容易算乱的事，变成了"在一张图上按固定顺序走两遍"这件机械、不容易错的事。</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>前向</b>：从最左边（输入）出发，顺着箭头一路往右，把每个节点的值都算出来，直到最右边的损失 L。走一遍就得到所有中间量。</li>
+      <li><b>反向</b>：从最右边（损失）出发，逆着箭头往回走，把"L 对这个节点输出的梯度"一路往前传，直到每个参数都拿到自己的梯度。</li>
+    </ul>
+    <figure class="fig">
+      <svg viewBox="0 0 680 300" role="img" aria-label="计算图：前向从左到右算值，反向从右到左传梯度">
+        <defs>
+          <marker id="arw6" markerWidth="10" markerHeight="10" refX="7" refY="3.2" orient="auto">
+            <path d="M0,0 L7,3.2 L0,6.4 z" fill="var(--fg-3)"/>
+          </marker>
+          <marker id="arw6r" markerWidth="10" markerHeight="10" refX="7" refY="3.2" orient="auto">
+            <path d="M0,0 L7,3.2 L0,6.4 z" fill="var(--warn)"/>
+          </marker>
+        </defs>
+        <!-- 节点：把网络每一步画成方框 -->
+        <rect x="30" y="70" width="76" height="46" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="68" y="98" font-size="14" text-anchor="middle" fill="var(--fg)">x</text>
+        <rect x="146" y="70" width="104" height="46" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="198" y="92" font-size="13" text-anchor="middle" fill="var(--fg)">z₁ = W₁x+b₁</text>
+        <text x="198" y="108" font-size="11" text-anchor="middle" fill="var(--fg-3)">仿射</text>
+        <rect x="290" y="70" width="86" height="46" rx="9" fill="var(--bg-3)" stroke="var(--ok)"/>
+        <text x="333" y="92" font-size="13" text-anchor="middle" fill="var(--fg)">h = ReLU</text>
+        <text x="333" y="108" font-size="11" text-anchor="middle" fill="var(--ok)">压零</text>
+        <rect x="416" y="70" width="104" height="46" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="468" y="92" font-size="13" text-anchor="middle" fill="var(--fg)">s = W₂h+b₂</text>
+        <text x="468" y="108" font-size="11" text-anchor="middle" fill="var(--fg-3)">仿射</text>
+        <rect x="560" y="70" width="94" height="46" rx="9" fill="var(--bg-3)" stroke="var(--accent)"/>
+        <text x="607" y="98" font-size="13" text-anchor="middle" fill="var(--fg)">⇒ 损失 L</text>
+        <!-- 前向箭头 -->
+        <line x1="106" y1="86" x2="143" y2="86" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw6)"/>
+        <line x1="250" y1="86" x2="287" y2="86" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw6)"/>
+        <line x1="376" y1="86" x2="413" y2="86" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw6)"/>
+        <line x1="520" y1="86" x2="557" y2="86" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw6)"/>
+        <text x="68" y="58" font-size="12" fill="var(--fg-3)">前向 →</text>
+        <!-- 反向箭头 -->
+        <line x1="560" y1="182" x2="523" y2="182" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw6r)"/>
+        <line x1="413" y1="182" x2="379" y2="182" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw6r)"/>
+        <line x1="287" y1="182" x2="253" y2="182" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw6r)"/>
+        <line x1="143" y1="182" x2="109" y2="182" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw6r)"/>
+        <text x="24" y="186" font-size="12" fill="var(--warn)">← 反向</text>
+        <text x="300" y="222" font-size="12.5" text-anchor="middle" fill="var(--warn)">每退一步：下游梯度 = 上游梯度 × 这一步的局部导数</text>
+        <text x="300" y="248" font-size="12" text-anchor="middle" fill="var(--fg-3)">前向按箭头顺着算，反向按箭头逆着算——这就是"前向传播 / 反向传播"名字的来历</text>
+        <line x1="30" y1="152" x2="654" y2="152" stroke="var(--border)" stroke-dasharray="4 4"/>
+      </svg>
+      <figcaption><b>计算图长什么样。</b>上面一排方框是网络的每一步运算，箭头表示"谁的结果被谁用到"。<b>走法一（前向，灰箭头）</b>：从左到右，把每个框的值算出来。 <b>走法二（反向，橙箭头）</b>：从右边的损失出发，逆着箭头往回，每退一个框就把"当前的梯度"乘上"这个框的局部导数"。全章后面所有推导，都是在这张图上按这两条走法做的。</figcaption>
+    </figure>
+    <div class="callout"><b>一句话记住它的价值</b>：网络再深、函数再复合，计算图的结构不变——永远是"前向算值、反向传梯度，每步只做一次『上游 × 局部』"。把这一条吃透，几十层的网络和这里两层的小网络，在算法上是同一件事。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本节的网络：为什么故意取这么小、这么整</h3>
+    <p style="font-size:15px;line-height:1.9;">为了让你能<b>心算验证每一步</b>，下面这个网络把数字取得极小：</p>
+    <div class="formula small">x = [1, 2]　W₁ = [[1, 0], [0, −1]]　b₁ = [0, 0]　W₂ = [[1, 1]]　b₂ = [0]</div>
+    <p style="font-size:15px;line-height:1.9;">逐项解释这些数意味着什么：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>x = [1, 2]</b>：输入是一维长为 2 的向量（真实场景里就是"两个特征"，或一个词向量）。这里取整数，是为了乘加时不出现小数。</li>
+      <li><b>W₁ 是 2×2</b>：把 2 维输入变成 2 维的中间量 z₁，所以隐藏层有 2 个单元。取 [[1,0],[0,−1]] 是精心挑的——第一行等于"原样取 x₁"，第二行等于"取 x₂ 再取反"。</li>
+      <li><b>b₁ = [0, 0]、b₂ = [0]</b>：偏置先取 0，免得手算时多一项；它们照样有梯度（后面会算出来）。</li>
+      <li><b>W₂ 是 1×2、b₂ 是 1 维</b>：输出 s 是一个<b>标量</b>（真实网络这里通常是"多个类别的分数"，我们先把标量这一最简单的情形走通，因为它已经包含了全部机制）。</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.9;">之所以强调"<b>标量输出</b>"：最后要算的梯度是"损失对参数的导数"，起点一定是一个标量（损失）对一个张量。把标量情形走通，多输出只是把"一个数"换成"一串数"，机制一模一样。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">动手：点「下一步」走完整张计算图</h3>
+    <div class="cg-wrap">
+      <svg id="cgSvg" viewBox="0 0 900 240" style="width:100%;min-width:640px;height:auto;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);"></svg>
+    </div>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="cgNext">下一步 →</button>
+      <button class="btn btn-ghost" id="cgReset">重置</button>
+    </div>
+    <div class="callout" id="cgCaption">前向：从左到右算每个节点的值。反向：从右到左传梯度，规则只有一条——<b>下游 = 上游 × 局部</b>。</div>
+    <p style="font-size:14px;color:var(--fg-2)">跟着点，注意两处：① 前向到 h 时，第 2 个分量被 ReLU 压成 0；② 反向回到 z₁ 时，那个被压过的分量把梯度也变成了 0——<b>前向的一次「压零」，在反向变成了一次「断流」</b>。这两件事一一对应，是本场景最该记住的因果。</p>
+    <div class="kv">
+      <span class="pill">手推 vs 数值梯度（中心差分）：max|差| = <b>2.2×10⁻¹³</b></span>
+      <span class="pill">∂s/∂W₁ 第 2 行 = <b>[0, 0]</b> —— 死区</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">全程对账表（本机实跑，k02_demo.py §2–§3）</h3>
+    <p style="font-size:15px;line-height:1.9;">把图上走过的每一步落成一张表。右边的"怎么算出来的"一列，每个数都写明了来源，你可以拿纸逐个核。</p>
+    <table class="num">
+      <tr><th>阶段</th><th>量</th><th>值</th><th>怎么算出来的</th></tr>
+      <tr><td rowspan="3">前向</td><td class="mono">z₁ = W₁x + b₁</td><td class="mono">[1, −2]</td><td style="text-align:left;">第 1 行：1·1+0·2=1；第 2 行：0·1+(−1)·2=−2</td></tr>
+      <tr><td class="mono">h = ReLU(z₁)</td><td class="mono">[1, 0]</td><td style="text-align:left;">max(1,0)=1；max(−2,0)=<b>0 ← 第 2 个单元被压死</b></td></tr>
+      <tr><td class="mono">s = W₂h + b₂</td><td class="mono">1.0</td><td style="text-align:left;">1·1 + 1·0 = 1</td></tr>
+      <tr><td rowspan="5">反向</td><td class="mono">∂s/∂W₂</td><td class="mono">[[1, 0]]</td><td style="text-align:left;">= hᵀ（外积规则：δ·输入ᵀ，这里 δ=1）</td></tr>
+      <tr><td class="mono">∂s/∂h</td><td class="mono">[1, 1]</td><td style="text-align:left;">= W₂ᵀ·1（W₂=[[1,1]]，转置后仍把 1 分给两个分量）</td></tr>
+      <tr><td class="mono">∂s/∂z₁</td><td class="mono">[1, 0]</td><td style="text-align:left;">= ∂s/∂h ⊙ 1[z₁&gt;0] = [1,1]⊙[1,0]（ReLU 局部导数，逐元素乘）</td></tr>
+      <tr><td class="mono">∂s/∂W₁</td><td class="mono">[[1,2],[0,0]]</td><td style="text-align:left;">= ∂s/∂z₁ · xᵀ = [1,0]ᵀ[1,2]（外积，得到 2×2）</td></tr>
+      <tr><td class="mono">∂s/∂x</td><td class="mono">[1, 0]</td><td style="text-align:left;">= W₁ᵀ·∂s/∂z₁（把信号乘回输入那一侧）</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;"><b>逐个核一遍（拿纸就能做）：</b>前向三个数上面已算过。反向从 ∂s/∂s=1 起步：过 W₂ 这一层，参数梯度是"上游 × 该层输入ᵀ"= 1·[1,0] = [[1,0]]；继续往前传的信号是 W₂ᵀ·1 = [1,1]。到 ReLU，局部导数是 1[z₁&gt;0] = [1,0]（因为 z₁=[1,−2]，只有第 1 个分量大于 0），逐元素乘 → [1,0]。再往前到 W₁ 层：参数梯度 = 上游[1,0] 与输入 x=[1,2] 的外积 = [[1,2],[0,0]]；信号 = W₁ᵀ[1,0] = [1,0]。<b>九个数字全部对得上。</b></p>
+    <div class="callout">盯住 <b>∂s/∂W₁ 的第 2 行全 0</b>：第 2 个隐藏单元前向时输出是 0（z₁⁽²⁾=−2&lt;0 进了 ReLU 死区），它无论怎么调权重，只要还在死区，输出都是 0，对 s 毫无影响——<b>梯度回流被 ReLU 截断</b>。这就是"死亡 ReLU"现象的最小标本，也是场景 4 分叉相加、场景 5 Jacobian 对角矩阵的直接后果。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">术语落地：上游 / 局部 / 下游，以及它凭什么成立</h3>
+    <p style="font-size:15px;line-height:1.9;">对每个节点，反向传播只有一条规则（slides p61–64 的原话结构）：</p>
+    <div class="formula">[下游梯度] = [上游梯度] × [局部梯度]</div>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>上游梯度</b>：损失对本节点<b>输出</b>的梯度，从后面传进来（上面例子里到达 h 的是 ∂s/∂h = [1,1]）；</li>
+      <li><b>局部梯度</b>：本节点输出对自己<b>输入</b>的导数（ReLU 节点：输入&gt;0 处为 1，否则 0）；</li>
+      <li><b>下游梯度</b>：乘完继续往前传（[1,1]⊙[1,0]=[1,0]）。</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.9;"><b>这条规则不是新发明——它就是链式法则换了个名字。</b>回忆一元链式法则：若 s 依赖 h、h 又依赖 z，那么 d s/d z = (d s/d h)·(d h/d z)。一个节点把"输入 → 输出"这个变换定义死了，它对输入的导数就是这个变换自己的"局部斜率"，与它上游发生什么完全无关；而它收到的"上游梯度"是链上已经乘好的前半段。两者相乘，就得到"损失对这个节点输入"的梯度，可以继续往前传。所以：</p>
+    <div class="callout"><b>反向传播 = 在计算图上从右到左，每个节点做一次「上游 × 局部」，并把中间结果存下来给前面的节点复用。</b>术语"反向传播（backpropagation）"指的就是这件事的整体，不是什么更深奥的东西。场景 4 会看清"复用"到底省下了什么，以及一个变量被用两次时该怎么算。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp3">
+    <div class="cp-head">◈ 检验点 3</div>
+    <div>上面例子里，∂s/∂W₁ 第 2 行为什么恰好是 [0, 0]？</div>
+    <div class="quiz-opt" data-v="0">A. 因为 W₁ 的第 2 行初始化为 0</div>
+    <div class="quiz-opt" data-v="1">B. 因为第 2 个单元 z₁⁽²⁾=−2&lt;0，ReLU 局部导数为 0，梯度被截断</div>
+    <div class="quiz-opt" data-v="2">C. 因为学习率太小，还没更新到</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 4 · 单节点规则普适化 + 分叉相加
+============================================================ -->
+<section class="scene" data-scene="4">
+  <header class="scene-header">
+    <span class="step-label">场景 04 · 机制</span>
+    <h2 class="scene-title">三种节点的直觉，和一条最容易漏掉的规则</h2>
+    <p class="scene-lead">反向传播听起来玄，其实整张计算图上的节点只有屈指可数的几种。只要把每种节点的"局部导数"记住，"上游 × 局部"就是机械动作。本节把最常用的三种节点逐个拆开，再处理一个几乎每个人第一次都会算漏的情形——<b>同一个变量被用两次</b>。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先分清对象：这里的"节点"指的是一个运算</h3>
+    <p style="font-size:15px;line-height:1.9;">先把话说准：后面说的"节点"，指的是计算图上的<b>一次基本运算</b>（一次加法、一次取最大、一次乘法），不是"一个神经元"。一个神经元内部就包含了好几种运算（加权和是一次仿射运算、压零是一次 max 运算），它们在图上是不同节点。</p>
+    <p style="font-size:15px;line-height:1.9;">每种节点要说清两件事：<b>它做的是什么</b>（前向）、以及<b>它的局部导数是什么</b>（反向要乘的那个数）。局部导数一旦确定，这个节点在反向传播里就"透明"了——不管它上游发生什么，都只是把上游梯度乘上这个固定的导数再传下去。</p>
+    <p style="font-size:15px;line-height:1.9;">下面三种节点覆盖了绝大部分常见情况：</p>
+    <div class="grid-3">
+      <div class="mini-card"><h4>+ 节点：分发</h4><p>z = x + y。∂z/∂x = ∂z/∂y = 1，上游梯度<b>原样复制</b>给每个加数。加数之间互不知道对方存在。</p></div>
+      <div class="mini-card"><h4>max 节点：路由</h4><p>z = max(x, y)。上游梯度<b>全部给大的那一路</b>，另一路得 0。ReLU 就是 max(z, 0)——死区的零梯度就是这么来的。</p></div>
+      <div class="mini-card"><h4>× 节点：交换</h4><p>z = xy。∂z/∂x = y，∂z/∂y = x：上游梯度乘上<b>另一个</b>输入。所以前向时必须把输入存下来，反向才有的乘。</p></div>
+    </div>
+
+    <figure class="fig">
+      <svg viewBox="0 0 680 300" role="img" aria-label="三种节点的局部导数与梯度流动">
+        <defs>
+          <marker id="arw7" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+          <marker id="arw7r" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--warn)"/></marker>
+        </defs>
+        <!-- 面板 1：加 -->
+        <text x="40" y="30" font-size="14" font-weight="700" fill="var(--fg)">+ 节点：原样分发</text>
+        <text x="40" y="50" font-size="12" fill="var(--fg-3)">z = x + y</text>
+        <text x="32" y="96" font-size="13" fill="var(--fg)">x</text>
+        <text x="32" y="160" font-size="13" fill="var(--fg)">y</text>
+        <circle cx="150" cy="126" r="20" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="150" y="132" font-size="18" text-anchor="middle" fill="var(--fg)">+</text>
+        <line x1="48" y1="92" x2="128" y2="116" stroke="var(--fg-3)" stroke-width="1.6" marker-end="url(#arw7)"/>
+        <line x1="48" y1="156" x2="128" y2="136" stroke="var(--fg-3)" stroke-width="1.6" marker-end="url(#arw7)"/>
+        <line x1="170" y1="126" x2="212" y2="126" stroke="var(--fg-3)" stroke-width="1.6" marker-end="url(#arw7)"/>
+        <text x="218" y="131" font-size="13" fill="var(--fg)">z</text>
+        <line x1="148" y1="196" x2="60" y2="196" stroke="var(--warn)" stroke-width="2" marker-end="url(#arw7r)"/>
+        <line x1="152" y1="196" x2="240" y2="196" stroke="var(--warn)" stroke-width="2" marker-end="url(#arw7r)"/>
+        <text x="40" y="216" font-size="11.5" fill="var(--warn)">原样复制</text>
+        <text x="40" y="232" font-size="11.5" fill="var(--warn)">两边各得全份</text>
+
+        <line x1="286" y1="20" x2="286" y2="280" stroke="var(--border)" stroke-dasharray="4 4"/>
+        <!-- 面板 2：max -->
+        <text x="316" y="30" font-size="14" font-weight="700" fill="var(--fg)">max 节点：路由给赢家</text>
+        <text x="316" y="50" font-size="12" fill="var(--fg-3)">z = max(x, y)</text>
+        <text x="308" y="96" font-size="13" fill="var(--fg)">x=5</text>
+        <text x="308" y="160" font-size="13" fill="var(--fg)">y=2</text>
+        <circle cx="430" cy="126" r="22" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="430" y="131" font-size="12" text-anchor="middle" fill="var(--fg)">max</text>
+        <line x1="336" y1="92" x2="410" y2="116" stroke="var(--fg-3)" stroke-width="1.6" marker-end="url(#arw7)"/>
+        <line x1="336" y1="156" x2="410" y2="136" stroke="var(--fg-3)" stroke-width="1.6" marker-end="url(#arw7)"/>
+        <line x1="452" y1="126" x2="494" y2="126" stroke="var(--fg-3)" stroke-width="1.6" marker-end="url(#arw7)"/>
+        <text x="500" y="131" font-size="13" fill="var(--fg)">z=5</text>
+        <line x1="428" y1="196" x2="340" y2="196" stroke="var(--warn)" stroke-width="2.4" marker-end="url(#arw7r)"/>
+        <line x1="432" y1="196" x2="520" y2="196" stroke="var(--fg-3)" stroke-width="1.6" stroke-dasharray="3 3"/>
+        <text x="316" y="216" font-size="11.5" fill="var(--warn)">全给它（x 更大）</text>
+        <text x="316" y="232" font-size="11.5" fill="var(--fg-3)">y 得 0（未选中）</text>
+
+        <line x1="566" y1="20" x2="566" y2="280" stroke="var(--border)" stroke-dasharray="4 4"/>
+        <!-- 面板 3：乘 -->
+        <text x="596" y="30" font-size="14" font-weight="700" fill="var(--fg)">× 节点：乘对方</text>
+        <text x="596" y="50" font-size="12" fill="var(--fg-3)">z = xy</text>
+        <text x="588" y="96" font-size="13" fill="var(--fg)">x</text>
+        <text x="588" y="160" font-size="13" fill="var(--fg)">y</text>
+        <text x="650" y="131" font-size="13" fill="var(--fg)">z</text>
+        <text x="596" y="216" font-size="11.5" fill="var(--warn)">给 x 的 = y</text>
+        <text x="596" y="232" font-size="11.5" fill="var(--warn)">给 y 的 = x</text>
+        <text x="596" y="262" font-size="11" fill="var(--fg-3)">（前向存的输入，反向要乘）</text>
+      </svg>
+      <figcaption><b>三种节点的反向行为，一眼记牢。</b>+ 把上游梯度原样分给两条入边；max 只把梯度给"当前较大的那一路"，其余得 0（这就是 ReLU 死区零梯度的来源）；× 把上游梯度乘上<b>另一个</b>输入再分别传回去——所以 × 节点在<b>前向时必须把两个输入都存下来</b>，否则反向没有数可乘。这三条吃透，绝大多数网络的梯度都能顺下来。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">最容易被算漏的一条：分叉处相加</h3>
+    <p style="font-size:15px;line-height:1.9;">前面三种节点都是"一个运算、几条边"。可真实网络里经常出现另一种情况：<b>同一个中间结果，被后面的运算用了不止一次</b>。这时它在计算图上就有不止一条出边（像树枝分叉）。反向传播往回走时，这个变量会从每条支路各收到一份梯度——这两份该怎么办？</p>
+    <p style="font-size:15px;line-height:1.9;">先看一个最小例子：y = a² + a。这里 a 被用了两次（一次平方、一次直接相加），两条支路。<b>拖滑块改变 a</b>，看两条支路各贡献多少、合起来是多少：</p>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">a</span>
+      <input type="range" id="branchA" min="-30" max="30" step="1" value="30">
+      <span class="slider-val" id="branchAV">3.0</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v" id="brY">12.0</div><div class="k">y = a² + a</div></div>
+      <div class="stat"><div class="v" id="brP1">6.0</div><div class="k">支路 ① 贡献：经 a² 回传 = 2a</div></div>
+      <div class="stat"><div class="v" id="brP2">1.0</div><div class="k">支路 ② 贡献：经 a 回传 = 1</div></div>
+      <div class="stat"><div class="v" id="brTot">7.0</div><div class="k">dy/da = 2a + 1（相加！）</div></div>
+    </div>
+    <figure class="fig">
+      <svg viewBox="0 0 680 240" role="img" aria-label="分叉处两条支路的梯度相加">
+        <defs>
+          <marker id="arw8" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+          <marker id="arw8r" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--warn)"/></marker>
+        </defs>
+        <!-- a 节点 -->
+        <circle cx="110" cy="120" r="26" fill="var(--bg-3)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="110" y="126" font-size="16" text-anchor="middle" fill="var(--fg)">a</text>
+        <!-- 上支路：平方 -->
+        <line x1="136" y1="110" x2="286" y2="70" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw8)"/>
+        <rect x="288" y="48" width="92" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="334" y="75" font-size="14" text-anchor="middle" fill="var(--fg)">a²</text>
+        <line x1="380" y1="70" x2="470" y2="106" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw8)"/>
+        <!-- 下支路：直接 -->
+        <line x1="136" y1="130" x2="286" y2="170" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw8)"/>
+        <rect x="288" y="148" width="92" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="334" y="175" font-size="14" text-anchor="middle" fill="var(--fg)">a（直通）</text>
+        <line x1="380" y1="170" x2="470" y2="134" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw8)"/>
+        <!-- 汇总 -->
+        <circle cx="500" cy="120" r="26" fill="var(--bg-3)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="500" y="127" font-size="18" text-anchor="middle" fill="var(--fg)">+</text>
+        <line x1="526" y1="120" x2="586" y2="120" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw8)"/>
+        <text x="592" y="125" font-size="14" fill="var(--fg)">y</text>
+        <!-- 反向 -->
+        <line x1="470" y1="205" x2="140" y2="205" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw8r)"/>
+        <text x="150" y="200" font-size="12" fill="var(--warn)">反向：两条支路的梯度在这里<b>相加</b>（不是取较大、也不是相乘）</text>
+        <text x="34" y="72" font-size="12" fill="var(--fg-3)">前向：a 同时喂给两个运算</text>
+        <text x="410" y="60" font-size="11.5" fill="var(--fg-3)">回传 2a</text>
+        <text x="410" y="180" font-size="11.5" fill="var(--fg-3)">回传 1</text>
+        <text x="150" y="230" font-size="11.5" fill="var(--fg-3)">dy/da = 2a + 1（a=3 时为 7）</text>
+      </svg>
+      <figcaption><b>同一变量被用多次，梯度要逐路相加。</b>前向时 a 分成两条支路（一条进 a²、一条直通）；反向时这两条支路各自往回送一份梯度（2a 和 1），<b>在 a 处必须把两份加起来</b>，得到 dy/da = 2a + 1。只取其中一条（比如只算 2a=6）就漏了一半，是最常见的算错。</figcaption>
+    </figure>
+    <div class="callout">a = 3 时 dy/da = 7（本机实跑对账：解析 7.0，中心差分数值 7.0）。<b>只取一条支路（3 或 1）都是错的。</b>严格写法：y 对 a 的全导数 = 沿所有路径的偏导之和，∂y/∂a|<sub>全</sub> = ∂y/∂(a²)·∂(a²)/∂a + ∂y/∂(a)·∂(a)/∂a = 1·2a + 1·1。这不是工程约定，是多元链式法则的直接推论——<b>同一变量的每条出边都是一条独立的依赖路径，全都要算上</b>。</div>
+    <p style="font-size:15px;line-height:1.9;"><b>为什么会这样，用最朴素的话讲：</b>导数衡量的是"a 动一点点，y 会跟着动多少"。a 一变，y 受影响有两条独立途径——通过 a² 变（这一条每秒贡献 2a 的灵敏度），以及通过那个直接的 a 项变（这一条每秒贡献 1）。<b>y 的总变化是这两条途径造成的效果之和</b>，所以两个灵敏度必须相加。想象两个人同时往同一个方向推一张桌子，桌子的加速度是两股力的合力，不是其中一股——分散的依赖路径各自贡献，合到一起才是总效果。</p>
+    <p style="font-size:15px;line-height:1.9;">这也是为什么"<b>一个变量被用几次，梯度就要加几次</b>"是反向传播的一条铁律。在真实网络里它无处不在：比如某个中间向量既被送进下一层、又被直接接到残差上（ResNet），或输入 x 既影响这一层、又在别处被用到——漏加任何一条都是静默的错误（模型能跑，只是学不对）。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">为什么"复用"是反向传播的命</h3>
+    <p style="font-size:15px;line-height:1.9;">到这里我们已经能"顺着图算"了。但一个自然的问题：<b>为什么非要专门发明一套算法？直接暴力地对每个参数求导不行吗？</b> 行，但代价高得离谱，差距正是"复用"两个字。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>朴素做法（逐个参数暴力求导）</b>：对每个参数 θ<sub>j</sub>，单独把整条链式法则推一遍。网络有 N 个参数，就要推 N 遍。而麻烦在于——每条链上 90% 的中间因子（各层的 ∂h/∂z 之类）是<b>完全相同的</b>，却被重复算了 N 次。参数越多，浪费越惊人。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>反向传播的做法</b>：从损失出发往回走，<b>每层的"误差信号"只算一次，存下来，给前面所有参数共用</b>。参数再多，这趟反向也只走一遍。slides 的总结（p75）说得干脆：通用计算图上，前向按拓扑序、反向按逆序；<b>做对了，反向的大 O 复杂度和前向相同</b>。于是"一次前向 + 一次反向"就能拿到全部参数的梯度。</p>
+    <div class="callout"><b>这就是深度学习在算力上可行的根本原因。</b>如果不是"反向一趟拿到全部梯度"，而是"每个参数各来一趟"，那么一个百万参数的模型训练一次就要跑一百万趟前向——根本不可行。今天所有框架里的 <span class="mono">loss.backward()</span>，做的就是这件"反向复用"的事。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp4">
+    <div class="cp-head">◈ 检验点 4</div>
+    <div>y = a·b + a，其中 a=2、b=5。∂y/∂a = ?</div>
+    <div class="quiz-opt" data-v="0">A. 5（只算 a·b 那条路）</div>
+    <div class="quiz-opt" data-v="1">B. 6（b 和 1 两条支路相加）</div>
+    <div class="quiz-opt" data-v="2">C. 10（两条支路相乘）</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 5 · 矩阵微积分
+============================================================ -->
+<section class="scene" data-scene="5">
+  <header class="scene-header">
+    <span class="step-label">场景 05 · 机制</span>
+    <h2 class="scene-title">输入变成一串数之后，导数就从"一个数"变成"一张表"</h2>
+    <p class="scene-lead">求梯度回答的问题永远是同一个：<b>某个输入动一点点，输出会跟着动多少</b>。当输入、输出都从单个数字变成一串数时，答案就不再是一个数字、而是一张表——这张表叫 <b>Jacobian</b>。本节要把"表"这件事从零说清，并给出后面全程要用到的四张表。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">从"一个数"到"一张表"：一次纯粹的数量升级</h3>
+    <p style="font-size:15px;line-height:1.9;">先回到最熟悉的情形。一个函数 f，输入一个数、输出一个数，比如 f(x)=x³。问"x 动一点，f 动多少"，答案是一个数：f′(1)=3。这就是高中里的导数。</p>
+    <p style="font-size:15px;line-height:1.9;">现在把输入换成一串数（一个向量 x=[x₁,…,x<sub>n</sub>]），输出仍然是一个数（比如损失 L）。问同样的问题："每个 x<sub>i</sub> 各自动一点，L 各动多少？"答案就从一个数变成<b>一串数</b>：每个输入分量配一个偏导数，排成向量 (∂L/∂x₁, …, ∂L/∂x<sub>n</sub>)。这个向量就是我们一直说的<b>梯度</b>。</p>
+    <p style="font-size:15px;line-height:1.9;">再往下：输入是一串数、<b>输出也是一串数</b>（比如一层网络把 n 维输入变成 m 维的 z）。这时"输出动多少"本身也要逐个分量看——第 i 个输出分量对第 j 个输入分量的偏导数 ∂z<sub>i</sub>/∂x<sub>j</sub>，一共 m×n 个，正好排成一张 m 行 n 列的<b>表</b>。这张表就叫 <b>Jacobian 矩阵</b>（雅可比矩阵）。</p>
+    <figure class="fig">
+      <svg viewBox="0 0 680 250" role="img" aria-label="从标量导数到梯度到 Jacobian 的三级升级">
+        <defs>
+          <marker id="arw9" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+        </defs>
+        <!-- 面板1 -->
+        <rect x="24" y="46" width="180" height="150" rx="12" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="114" y="76" font-size="13" text-anchor="middle" fill="var(--fg-2)">1 输入 → 1 输出</text>
+        <text x="114" y="112" font-size="17" text-anchor="middle" fill="var(--fg)">f′(x)</text>
+        <text x="114" y="150" font-size="13" text-anchor="middle" fill="var(--accent)">一个数</text>
+        <text x="114" y="176" font-size="11.5" text-anchor="middle" fill="var(--fg-3)">f(x)=x³ → 3x²</text>
+        <line x1="208" y1="120" x2="248" y2="120" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw9)"/>
+        <!-- 面板2 -->
+        <rect x="250" y="46" width="180" height="150" rx="12" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="340" y="76" font-size="13" text-anchor="middle" fill="var(--fg-2)">n 输入 → 1 输出</text>
+        <text x="340" y="112" font-size="15" text-anchor="middle" fill="var(--fg)">∇f = ∂f/∂x</text>
+        <text x="340" y="150" font-size="13" text-anchor="middle" fill="var(--accent)">n 维向量</text>
+        <text x="340" y="176" font-size="11.5" text-anchor="middle" fill="var(--fg-3)">(∂f/∂x₁,…,∂f/∂x<sub>n</sub>)</text>
+        <line x1="434" y1="120" x2="474" y2="120" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw9)"/>
+        <!-- 面板3 -->
+        <rect x="476" y="46" width="180" height="150" rx="12" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="566" y="76" font-size="13" text-anchor="middle" fill="var(--fg-2)">n 输入 → m 输出</text>
+        <text x="566" y="112" font-size="15" text-anchor="middle" fill="var(--fg)">J<sub>f</sub></text>
+        <text x="566" y="150" font-size="13" text-anchor="middle" fill="var(--accent)">m×n 的矩阵</text>
+        <text x="566" y="176" font-size="11.5" text-anchor="middle" fill="var(--fg-3)">(J)<sub>ij</sub>=∂f<sub>i</sub>/∂x<sub>j</sub></text>
+        <text x="340" y="228" font-size="12.5" text-anchor="middle" fill="var(--fg-3)">越往右，输出分量越多——"导数"就从数、涨成向量、再涨成表</text>
+      </svg>
+      <figcaption><b>三级升级，一步不缺。</b>左右对比就能看出规律：<b>梯度和 Jacobian 都不是新东西，只是普通导数在"输入/输出变成一串数"之后自然长出来的形状</b>。梯度的长度等于输入维数；Jacobian 的行数等于输出维数、列数等于输入维数。记住"输出定行、输入定列"，后面所有形状推导都有了准绳。</figcaption>
+    </figure>
+    <table class="cmp">
+      <tr><th>情形</th><th>对象</th><th>形状</th><th>例子</th></tr>
+      <tr><td>1 输入 1 输出</td><td>导数 df/dx</td><td>标量</td><td>f(x)=x³ → 3x²</td></tr>
+      <tr><td>n 输入 1 输出</td><td>梯度 ∇f = ∂f/∂x</td><td>n 维向量</td><td>(∂f/∂x)<sub>i</sub> = ∂f/∂x<sub>i</sub></td></tr>
+      <tr><td>n 输入 m 输出</td><td>Jacobian J<sub>f</sub></td><td>m×n 矩阵</td><td>(J<sub>f</sub>)<sub>ij</sub> = ∂f<sub>i</sub>/∂x<sub>j</sub></td></tr>
+    </table>
+    <div class="callout">一句话收住：<b>梯度是 Jacobian 在"输出只有 1 维"时的特例。</b>所以后面说"求梯度"，其实一直在处理这张表；只是输出常常是标量，表就塌成一行向量，看着简单了。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">链式法则在"表"的层面长什么样：一张表乘另一张表</h3>
+    <p style="font-size:15px;line-height:1.9;">复合函数怎么求导，大家都会：y=f(u)、u=g(x)，则 dy/dx = (dy/du)(du/dx)。到了向量层面，这条法则一个字没变，只是每个"因子"从数变成了 Jacobian 表：设 x 是 n 维、y=g(x) 是 p 维、z=f(y) 是 m 维，则</p>
+    <div class="formula small">∂z/∂x ＝ (∂z/∂y) · (∂y/∂x)　　<span class="shp">(m×p)(p×n) = m×n</span></div>
+    <p style="font-size:15px;line-height:1.9;"><b>注意形状：中间那个 p 被"夹"掉了，剩下 m×n — 正好是 z 对 x 该有的尺寸。</b>这不是巧合，而是矩阵乘法唯一能把这些维数拼起来的拼法，也是你每次写完公式后"查形状"能立刻验错的原因。</p>
+    <p style="font-size:15px;line-height:1.9;">反向传播用的是这条法则<b>从右往左算的版本</b>。这一点值得单独说：从最外层损失出发时，我们手里始终是一个<b>行向量</b>（"损失对当前量的梯度"），每次往左走就乘上一个局部 Jacobian。这种"行向量 × Jacobian"的乘法有个专门名字：<b>VJP（Vector-Jacobian Product，向量-雅可比积）</b>。反向传播在实现上，就是一串 VJP 首尾相接。</p>
+    <figure class="fig">
+      <svg viewBox="0 0 680 210" role="img" aria-label="链式法则就是 Jacobian 相乘，反向是一串 VJP">
+        <defs>
+          <marker id="arw10" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+          <marker id="arw10r" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--warn)"/></marker>
+        </defs>
+        <text x="60" y="60" font-size="14" fill="var(--fg)">x</text>
+        <text x="52" y="78" font-size="11" fill="var(--fg-3)">(n)</text>
+        <rect x="120" y="60" width="120" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="180" y="88" font-size="13" text-anchor="middle" fill="var(--fg)">g：p×n</text>
+        <text x="286" y="60" font-size="14" fill="var(--fg)">y</text>
+        <text x="278" y="78" font-size="11" fill="var(--fg-3)">(p)</text>
+        <rect x="360" y="60" width="120" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="420" y="88" font-size="13" text-anchor="middle" fill="var(--fg)">f：m×p</text>
+        <text x="526" y="60" font-size="14" fill="var(--fg)">z</text>
+        <text x="518" y="78" font-size="11" fill="var(--fg-3)">(m)</text>
+        <line x1="86" y1="82" x2="116" y2="82" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw10)"/>
+        <line x1="244" y1="82" x2="356" y2="82" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw10)"/>
+        <text x="274" y="74" font-size="11" fill="var(--fg-3)">前向 →</text>
+        <!-- 反向 -->
+        <line x1="356" y1="150" x2="244" y2="150" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw10r)"/>
+        <line x1="116" y1="150" x2="86" y2="150" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw10r)"/>
+        <text x="150" y="145" font-size="11.5" fill="var(--warn)">乘 f 的 Jacobian</text>
+        <text x="410" y="145" font-size="11.5" fill="var(--warn)">乘 g 的 Jacobian</text>
+        <text x="200" y="188" font-size="12" text-anchor="middle" fill="var(--warn)">反向：从 z 的梯度（1×m 行向量）出发，一路左乘 Jacobian，每步都是一次 VJP</text>
+      </svg>
+      <figcaption><b>链式法则 = 表乘表；反向 = 一串 VJP。</b>前向（灰）从左到右把 x 变成 z；反向（橙）从最右端的梯度出发，<b>每次左乘一个局部 Jacobian</b>，把梯度一路推回最左端。中间维数 p 被自然约掉，保证乘到哪一步，手里的向量尺寸都和当时那个量对得上。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">必须记牢的四张表（后面全程反复用）</h3>
+    <p style="font-size:15px;line-height:1.9;">把网络里那几个基本运算的 Jacobian 一次性列全。它们不靠背，每个都能从"输出定行、输入定列"现推：</p>
+    <table class="cmp">
+      <tr><th>#</th><th>函数</th><th>Jacobian</th><th>一句话</th></tr>
+      <tr><td>1</td><td>逐元素激活 h<sub>i</sub>=f(z<sub>i</sub>)</td><td class="mono">diag(f′(z₁),…,f′(z<sub>n</sub>))</td><td><b>对角矩阵</b>——ReLU 的对角元只有 0 和 1，这就是死区整行零梯度的代数来源</td></tr>
+      <tr><td>2</td><td>z = Wx + b，对 x</td><td class="mono">W</td><td>每个 x<sub>j</sub> 经 W 的所有行影响 z；∂z<sub>i</sub>/∂x<sub>j</sub> = W<sub>ij</sub></td></tr>
+      <tr><td>3</td><td>z = Wx + b，对 b</td><td class="mono">I（单位阵）</td><td>∂z<sub>i</sub>/∂b<sub>j</sub> = δ<sub>ij</sub>（偏置一格对一格、直通）</td></tr>
+      <tr><td>4</td><td>s = uᵀh（标量），对 h</td><td class="mono">uᵀ（1×n）</td><td>标量对向量的梯度是行向量；形状约定下写成列向量 u</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;"><b>逐个解释这四张表怎么来的：</b></p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>#1 逐元素激活：</b>h<sub>i</sub> 只依赖 z<sub>i</sub>（第 i 个输出只受第 i 个输入影响），所以表里只有对角线上有数，其余位置全是 0——这就是"对角矩阵"。对角元是 f′(z<sub>i</sub>)。ReLU 的 f′ 只能取 0 或 1，于是这个对角阵要么是 1（该单元活着）、要么整行 0（该单元死了）。<b>场景 3 里 ∂s/∂W₁ 那个全零行，代数的根就在这张对角阵上。</b></li>
+      <li><b>#2 对 x：</b>展开 z<sub>i</sub> = Σ<sub>j</sub> W<sub>ij</sub>x<sub>j</sub>，x<sub>j</sub> 前面的系数正是 W<sub>ij</sub>，所以第 i 行第 j 列元素就是 W<sub>ij</sub>——整张表就是 W 本身。</li>
+      <li><b>#3 对 b：</b>z<sub>i</sub> = …+ b<sub>i</sub>，b<sub>i</sub> 只出现在第 i 个输出里，系数是 1，所以是单位阵。含义：偏置是"自己进自己出"的直通通道。</li>
+      <li><b>#4 标量对向量：</b>s = uᵀh = Σ<sub>i</sub>u<sub>i</sub>h<sub>i</sub>，对 h<sub>i</sub> 求导得 u<sub>i</sub>。输出是标量（1 行）、输入是 n 维（n 列），所以是 1×n 的行向量 uᵀ。</li>
+    </ul>
+    <div class="callout"><b>这四张表 + "反向 = 一串 VJP" = 整个反向传播。</b>真的不需要更多东西。场景 7 推两层 MLP，就是把这几张表按顺序乘起来而已。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">亲手验证形状：改一改维数，看每个梯度该长什么样</h3>
+    <p style="font-size:15px;line-height:1.9;"><b>为什么值得动手：</b>反向传播里最容易出错、又最容易自查的地方就是<b>形状</b>。这里把网络缩到只有一层 z = Wx + b：你可以拖动"W 的行数 m"和"列数 n"，下面两行会实时告诉你每个量的尺寸，并检查"梯度的形状 = 参数的形状"这条约定是否成立。</p>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2);min-width:150px;">m：z 的维数（W 的行数）</span>
+      <input type="range" id="shapeM" min="1" max="6" step="1" value="4">
+      <span class="slider-val" id="shapeMV">4</span>
+    </div>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2);min-width:150px;">n：x 的维数（W 的列数）</span>
+      <input type="range" id="shapeN" min="1" max="6" step="1" value="3">
+      <span class="slider-val" id="shapeNV">3</span>
+    </div>
+    <table class="num" style="margin-top:14px;">
+      <tr><th>量</th><th>形状</th><th>为什么是这个形状</th></tr>
+      <tr><td class="mono">x</td><td class="mono" id="shX">—</td><td>输入，自己定</td></tr>
+      <tr><td class="mono">W</td><td class="mono" id="shW">—</td><td>把 n 维映成 m 维，所以是 m×n（行数 = 输出、列数 = 输入）</td></tr>
+      <tr><td class="mono">z = Wx + b</td><td class="mono" id="shZ">—</td><td>输出，一行一个分量</td></tr>
+      <tr><td class="mono">δ = ∂s/∂z（上游）</td><td class="mono" id="shDelta">—</td><td>损失对标量输出向量的梯度，和 z 同形</td></tr>
+      <tr><td class="mono">∂s/∂W = δxᵀ</td><td class="mono" id="shGW">—</td><td>外积 (m×1)(1×n) → <b>和 W 同形 ✓</b></td></tr>
+      <tr><td class="mono">∂s/∂b = δ</td><td class="mono" id="shGB">—</td><td>和 b 同形 ✓</td></tr>
+      <tr><td class="mono">∂s/∂x = Wᵀδ</td><td class="mono" id="shGX">—</td><td>(n×m)(m×1) → 和 x 同形 ✓</td></tr>
+    </table>
+    <div class="callout">看到的规律：<b>无论 m、n 怎么变，三个梯度的形状永远分别等于 W、b、x 的形状。</b>这不是巧合，是"训练时要拿它直接减去参数"逼出来的约定——形状不一样就没法做减法。所以<span class="mono">写完梯度先查形状</span>，是检查推导最快的一招。</div>
+  </div>
+
+  <div class="card stepper" id="jacStepper">
+    <h3 style="margin-top:0">推导：对 z = Wx + b，∂s/∂W 为什么是外积 δxᵀ（点击逐步展开）</h3>
+    <ol>
+      <li class="step show">设上游给了 δ = ∂s/∂z（m 维，s 是最终标量损失）。逐元素问：<b>W<sub>ij</sub> 只出现在 z 的哪一个分量里？</b>展开 z<sub>l</sub> = Σ<sub>k</sub> W<sub>lk</sub>x<sub>k</sub> + b<sub>l</sub>——W<sub>ij</sub> 只在 l=i 那一项出现，所以 ∂z<sub>l</sub>/∂W<sub>ij</sub> = x<sub>j</sub>（当 l=i），其余全为 0。<span class="shp">这是全部推导的支点：W 的第 i 行只负责 z 的第 i 个分量。</span></li>
+      <li class="step">代入链式法则求和：∂s/∂W<sub>ij</sub> = Σ<sub>l</sub> (∂s/∂z<sub>l</sub>)(∂z<sub>l</sub>/∂W<sub>ij</sub>) = Σ<sub>l</sub> δ<sub>l</sub>·⟦l=i⟧·x<sub>j</sub> = <b>δ<sub>i</sub>x<sub>j</sub></b>。求和塌缩成一项。</li>
+      <li class="step">把 m×n 个元素拼回矩阵：第 (i,j) 元是 δ<sub>i</sub>x<sub>j</sub>，这正是外积的定义：<div class="formula small">∂s/∂W = δ xᵀ <span class="shp">(m×1)(1×n) = m×n</span></div></li>
+      <li class="step">同法两条：<b>∂s/∂b = δ</b>（∂z<sub>i</sub>/∂b<sub>i</sub>=1）；<b>∂s/∂x = Wᵀδ</b>（∂s/∂x<sub>j</sub> = Σ<sub>i</sub> δ<sub>i</sub>W<sub>ij</sub> = (Wᵀδ)<sub>j</sub>）。<b>这三条就是线性层反向传播的全部。</b></li>
+      <li class="step"><b>形状约定 vs Jacobian 形式</b>：严格 Jacobian 形式里 ∂s/∂W 该拉平成 1×(mn) 行向量，好推链式法则；工程上约定<b>梯度的形状 = 参数的形状</b>（m×n），好写 SGD 更新 W ← W − α·∂s/∂W。做法：<b>用 Jacobian 形式推，用形状约定摆</b>。转置的存在理由很朴素：<b>为了让维度对上</b>——写完先查形状，对不上一定错了。</li>
+    </ol>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" data-step-next>展开下一步 →</button>
+      <button class="btn btn-ghost" data-step-reset>收起重来</button>
+    </div>
+  </div>
+
+  <div class="checkpoint" data-check="cp5">
+    <div class="cp-head">◈ 检验点 5</div>
+    <div>z = Wx + b，W 是 4×3，x 是 3 维。上游梯度 δ = ∂s/∂z 是 4 维。∂s/∂W 的形状是？</div>
+    <div class="quiz-opt" data-v="0">A. 4×3 —— 外积 δxᵀ = (4×1)(1×3)</div>
+    <div class="quiz-opt" data-v="1">B. 3×4</div>
+    <div class="quiz-opt" data-v="2">C. 12 维向量</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 6 · softmax + 交叉熵 → ŷ−y
+============================================================ -->
+<section class="scene" data-scene="6">
+  <header class="scene-header">
+    <span class="step-label">场景 06 · 机制</span>
+    <h2 class="scene-title">全书最干净的梯度：∂J/∂z = ŷ − y</h2>
+    <p class="scene-lead">前面把"线性层 + 激活"的梯度都配齐了，还差最后一环：网络最末端那步"把分数变成类别预测、再算损失"。这一步是 softmax 套交叉熵，两步求导后所有复杂项奇迹般全部消掉，只剩"预测 − 真实"。先讲清它在解决什么问题，再逐步推导，最后拖滑块亲眼验证。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先问"为什么需要它"：从分数到损失，中间缺两样东西</h3>
+    <p style="font-size:15px;line-height:1.9;">网络的最后一层线性运算给出的是一组<b>分数（logits）</b> z = [z₁,…,z<sub>C</sub>]，每个类别一个。比如三分类得到 z = [2, 1, −1]，看着像"第 1 类最好"，但这两个数有两个毛病，都不能直接拿去训练：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>分数不是概率。</b>它可正可负、加起来也不是 1，没法解释成"有多大概率属于这一类"。</li>
+      <li><b>分数没法直接当损失。</b>我们需要一把"尺子"，衡量"预测和正确答案差多少"，差距越小越好、而且能求导。</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.9;"><b>softmax 解决第一件，交叉熵解决第二件。</b>softmax 把任意一组分数"压"成一组概率：大的分数得大概率、小的得小概率、所有概率加起来是 1。交叉熵拿这组概率和真实答案一比，算出"当前预测有多糟糕"——它就是损失 J。</p>
+    <div class="formula small">ŷ<sub>i</sub> = e<sup>z<sub>i</sub></sup> / Σ<sub>j</sub> e<sup>z<sub>j</sub></sup>　(softmax)　　J = −log ŷ<sub>y</sub>　(交叉熵，y = 正确类的下标)</div>
+    <p style="font-size:15px;line-height:1.9;">逐字读这两个式子：<b>e<sup>z</sup></b> 把分数变成正数（且大的放大、小的缩小，拉开差距）；<b>除以总和</b>保证加起来是 1，于是每个 ŷ<sub>i</sub> 落在 (0,1) 里，像概率。损失 J 只取<b>正确类 y</b> 那一个概率 ŷ<sub>y</sub>，取负对数：预测得越准（ŷ<sub>y</sub> 越接近 1），−log ŷ<sub>y</sub> 越接近 0；预测得越离谱（ŷ<sub>y</sub> 越接近 0），−log 越大、惩罚越狠。这正好是我们要的"尺子"。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>要算梯度，就要把这把尺子对 logits z 求导。</b>链式法则要过两段：先"softmax 对 z 求导"，再"交叉熵对概率求导"。下面逐步来。</p>
+  </div>
+
+  <div class="card stepper" id="smStepper">
+    <h3 style="margin-top:0">完整推导（设 logits z ∈ R<sup>C</sup>，ŷ=softmax(z)，正确类 y，J = −log ŷ<sub>y</sub>）</h3>
+    <ol>
+      <li class="step show"><b>softmax 的 Jacobian</b>：ŷ<sub>i</sub> = e<sup>z<sub>i</sub></sup>/Σ<sub>j</sub>e<sup>z<sub>j</sub></sup> 对 z<sub>k</sub> 求导。分母里含所有 z<sub>j</sub>，所以分子分母都随 z<sub>k</sub> 变，得用商法则，分两种情形：
+        <ul style="font-size:14px;">
+          <li>i=k（求导的是分子里那一项）：∂ŷ<sub>i</sub>/∂z<sub>i</sub> = (e<sup>z<sub>i</sub></sup>·S − e<sup>z<sub>i</sub></sup>·e<sup>z<sub>i</sub></sup>)/S² = ŷ<sub>i</sub>(1 − ŷ<sub>i</sub>)</li>
+          <li>i≠k（只有分母变）：∂ŷ<sub>i</sub>/∂z<sub>k</sub> = −e<sup>z<sub>i</sub></sup>e<sup>z<sub>k</sub></sup>/S² = −ŷ<sub>i</sub>ŷ<sub>k</sub></li>
+        </ul>
+        合并成统一式：<div class="formula small">∂ŷ<sub>i</sub>/∂z<sub>k</sub> = ŷ<sub>i</sub>(δ<sub>ik</sub> − ŷ<sub>k</sub>)</div>（δ<sub>ik</sub> 是"i=k 时为 1、否则为 0"的记号；i=k 时得 ŷ<sub>i</sub>(1−ŷ<sub>i</sub>)，i≠k 时得 −ŷ<sub>i</sub>ŷ<sub>k</sub>，与上面两式一致。）</li>
+      <li class="step"><b>损失对概率的导数</b>：J = −log ŷ<sub>y</sub> 只对 i=y 那一项有依赖（其他类的概率根本没进 J）：<div class="formula small">∂J/∂ŷ<sub>i</sub> = −δ<sub>iy</sub>/ŷ<sub>i</sub></div></li>
+      <li class="step"><b>链式法则求和</b>（关键一步：把所有"ŷ<sub>i</sub> 变化对 z<sub>k</sub> 的影响"加起来）：∂J/∂z<sub>k</sub> = Σ<sub>i</sub> (∂J/∂ŷ<sub>i</sub>)(∂ŷ<sub>i</sub>/∂z<sub>k</sub>) = Σ<sub>i</sub> (−δ<sub>iy</sub>/ŷ<sub>i</sub>)·ŷ<sub>i</sub>(δ<sub>ik</sub>−ŷ<sub>k</sub>)。<b>注意 −δ<sub>iy</sub>/ŷ<sub>i</sub> 里的 ŷ<sub>i</sub> 与括号外的 ŷ<sub>i</sub> 正好约掉</b>——这就是"复杂项消失"的来源：= −Σ<sub>i</sub> δ<sub>iy</sub>(δ<sub>ik</sub> − ŷ<sub>k</sub>)。</li>
+      <li class="step">求和里 δ<sub>iy</sub> 只在 i=y 存活：−(δ<sub>yk</sub> − ŷ<sub>k</sub>) = <b>ŷ<sub>k</sub> − δ<sub>yk</sub></b>。而 δ<sub>yk</sub> 就是 one-hot 标签 y 的第 k 个分量（正确类是 1、其余是 0）。合起来写成向量：<div class="formula small">∂J/∂z = ŷ − y</div></li>
+      <li class="step"><b>它为什么"干净"</b>：ŷ−y = "模型以为的分布" − "真实分布"。完全预测对（ŷ→y）时梯度→0，自动停；错得越离谱，梯度越大。<b>模式识别</b>：这和 K01 word2vec 的 ∂J/∂v<sub>c</sub> = Σ<sub>w</sub>P(w|c)u<sub>w</sub> − u<sub>o</sub>（期望 − 观测）是同一个结构——softmax 类损失的签名。认出它，以后所有同类推导都是秒推。</li>
+    </ol>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" data-step-next>展开下一步 →</button>
+      <button class="btn btn-ghost" data-step-reset>收起重来</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">这个梯度在"做什么"：一句话直觉 + 一张图</h3>
+    <p style="font-size:15px;line-height:1.9;">把 ∂J/∂z = ŷ − y 拆开看每个分量在说什么。对<b>正确类 y</b>：梯度 = ŷ<sub>y</sub> − 1，永远 ≤ 0；梯度下降是在<b>减去</b>梯度（θ ← θ − α·grad），减去一个负数等于<b>加上</b>一个正数——所以正确类的 logit 会被<b>往上推</b>，而且推力正好是"还差多少概率"（1 − ŷ<sub>y</sub>）：预测得越差（ŷ<sub>y</sub> 越小），推得越狠。对<b>错误类 i≠y</b>：梯度 = ŷ<sub>i</sub> > 0，减去它等于把 logit 往下压，压的力度等于"它现在抢到了多少概率"。</p>
+    <figure class="fig">
+      <svg viewBox="0 0 680 250" role="img" aria-label="梯度 ŷ−y 对正确类是往上推、对错误类是往下压">
+        <defs>
+          <marker id="arw11" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--ok)"/></marker>
+          <marker id="arw11r" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--err)"/></marker>
+        </defs>
+        <text x="60" y="30" font-size="13" fill="var(--fg-2)">当前 logits z，正确类是第 1 类</text>
+        <rect x="70" y="120" width="70" height="80" fill="rgba(52,211,153,.18)" stroke="var(--ok)"/>
+        <text x="105" y="166" font-size="14" text-anchor="middle" fill="var(--fg)">z₁=2</text>
+        <text x="105" y="215" font-size="12" text-anchor="middle" fill="var(--ok)">正确类</text>
+        <rect x="200" y="140" width="70" height="60" fill="rgba(248,113,113,.14)" stroke="var(--err)"/>
+        <text x="235" y="176" font-size="14" text-anchor="middle" fill="var(--fg)">z₂=1</text>
+        <text x="235" y="215" font-size="12" text-anchor="middle" fill="var(--err)">错误类</text>
+        <rect x="330" y="160" width="70" height="40" fill="rgba(248,113,113,.14)" stroke="var(--err)"/>
+        <text x="365" y="186" font-size="14" text-anchor="middle" fill="var(--fg)">z₃=−1</text>
+        <text x="365" y="215" font-size="12" text-anchor="middle" fill="var(--err)">错误类</text>
+        <line x1="105" y1="112" x2="105" y2="70" stroke="var(--ok)" stroke-width="3" marker-end="url(#arw11)"/>
+        <text x="112" y="66" font-size="12" fill="var(--ok)">往上推 (ŷ₁−1&lt;0)</text>
+        <line x1="235" y1="132" x2="235" y2="92" stroke="var(--err)" stroke-width="3" marker-end="url(#arw11r)"/>
+        <text x="242" y="88" font-size="12" fill="var(--err)">往下压 (ŷ₂&gt;0)</text>
+        <line x1="365" y1="152" x2="365" y2="112" stroke="var(--err)" stroke-width="3" marker-end="url(#arw11r)"/>
+        <text x="372" y="108" font-size="12" fill="var(--err)">往下压 (ŷ₃&gt;0)</text>
+        <text x="470" y="86" font-size="13" fill="var(--ok)">正确类：梯度 ≤ 0</text>
+        <text x="470" y="108" font-size="12" fill="var(--fg-3)">更新 = 减去负梯度 = 加上</text>
+        <text x="470" y="128" font-size="12" fill="var(--fg-3)">"还差 1−ŷ_y 这么多"</text>
+        <text x="470" y="170" font-size="13" fill="var(--err)">错误类：梯度 = ŷ_i &gt; 0</text>
+        <text x="470" y="192" font-size="12" fill="var(--fg-3)">更新 = 减去正数 = 压下去</text>
+        <text x="470" y="212" font-size="12" fill="var(--fg-3)">"抢到多少概率就压多少"</text>
+      </svg>
+      <figcaption><b>ŷ − y 的物理含义：拉正确类、压错误类。</b>向量 y 是 one-hot（正确类分量 1、其余 0），所以 ŷ − y 在正确类那一格是"概率减 1"（负数）、在错误类那些格是"各自的概率"（正数）。梯度下降减去梯度，效果就是：<b>把正确答案的分数往上提、把其他类的分数按它们当前抢到的概率往下压</b>。而且这一切<b>自动带缩放</b>——已经预测得很准时推力接近 0，错得离谱时推力很大。这就是它在整个深度学习里被反复复用的原因。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">亲手验证：拖 logits，盯梯度（正确类固定为第 1 类）</h3>
+    <p style="font-size:15px;line-height:1.9;">下面三个滑块就是三个类的分数 z₁、z₂、z₃。柱状图是 softmax 算出的概率 ŷ，下面四个数分别是损失 J 和三个梯度分量。你可以直接对着公式 ŷ−y 核每一个数。</p>
+    <div class="slider-wrap"><span style="font-size:13px;color:var(--fg-2);min-width:52px;">z₁ (真)</span><input type="range" id="smZ1" min="-30" max="30" step="1" value="20"><span class="slider-val" id="smZ1V">2.0</span></div>
+    <div class="slider-wrap"><span style="font-size:13px;color:var(--fg-2);min-width:52px;">z₂</span><input type="range" id="smZ2" min="-30" max="30" step="1" value="10"><span class="slider-val" id="smZ2V">1.0</span></div>
+    <div class="slider-wrap"><span style="font-size:13px;color:var(--fg-2);min-width:52px;">z₃</span><input type="range" id="smZ3" min="-30" max="30" step="1" value="-10"><span class="slider-val" id="smZ3V">−1.0</span></div>
+    <div class="bars" id="smBars" style="height:160px;"></div>
+    <div class="stat-row">
+      <div class="stat"><div class="v" id="smJ">0.349</div><div class="k">J = −log ŷ₁（交叉熵）</div></div>
+      <div class="stat"><div class="v" id="smG1" style="font-size:17px;">−0.295</div><div class="k">∂J/∂z₁ = ŷ₁ − 1</div></div>
+      <div class="stat"><div class="v" id="smG2" style="font-size:17px;">0.259</div><div class="k">∂J/∂z₂ = ŷ₂ − 0</div></div>
+      <div class="stat"><div class="v" id="smG3" style="font-size:17px;">0.035</div><div class="k">∂J/∂z₃ = ŷ₃ − 0</div></div>
+    </div>
+    <p style="font-size:15px;line-height:1.9;"><b>怎么核：</b>默认位置就是本机实跑的那组数：z=[2,1,−1] → ŷ=[0.705385, 0.259496, 0.035119]，J=0.349012，梯度=[−0.294615, 0.259496, 0.035119]，<b>与中心差分数值解的 max|差| = 1.5×10⁻¹⁰</b>。检查 ŷ 三个数加起来是不是 1；检查梯度是不是 = ŷ 减 one-hot y；再看 ∂J/∂z₁ 是不是 = 0.705385 − 1 = −0.294615。</p>
+    <div class="callout">两个极端值得亲手试：<b>把 z₁ 拖到最大</b>——ŷ₁→1，J→0，三个梯度全部→0，这就是"固定点"（ŷ=y 处梯度为零），模型到位就自动不动了。<b>把 z₁ 拉到最小</b>——ŷ₁→0，J 暴涨，∂J/∂z₁→−1，说明正确类此时会吃到"几乎满格 ∥−1∥"的向上推力，而错误类的梯度被各自的分概率分食。梯度的大小随"错得多离谱"自动调节，不需要任何手工权重。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">一个容易漏的数值细节：log-sum-exp 稳定化</h3>
+    <p style="font-size:15px;line-height:1.9;">softmax 的直接实现 exp(z<sub>i</sub>)/Σexp(z<sub>j</sub>) 在 z 很大时会溢出：双精度浮点最大约 1.8×10<sup>308</sup>，而 e<sup>800</sup> 就已经超过它、直接变成 Inf。一旦某个 exp 变成 Inf，整个概率就算废了。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>工程做法：先减最大值。</b>计算时用一个恒等变形：</p>
+    <div class="formula small">softmax(z) = softmax(z − max z)</div>
+    <p style="font-size:15px;line-height:1.9;">它是恒等的——分子分母同乘 e<sup>−max z</sup>，结果一模一样；但减完后最大的指数变成了 0（e⁰=1），其余全是负指数（≤1），彻底躲开上溢。<b>交叉熵同理</b>：−log ŷ<sub>y</sub> 不要先算 ŷ<sub>y</sub> 再取 log（ŷ<sub>y</sub> 很小时会下溢成 0，log 0 = −Inf），而应直接算 −z<sub>y</sub> + log Σ<sub>j</sub>e<sup>z<sub>j</sub></sup>（log-sum-exp）。A2 里直接用 <span class="mono">nn.CrossEntropyLoss</span>，它内部已含这套稳定化——<b>所以模型的 forward 只输出 logits，不要再自己套一层 softmax</b>，否则既重复又可能踩溢出。</p>
+    <div class="callout warn">实操要点：PyTorch 的 CrossEntropyLoss = LogSoftmax + NLLLoss。若你手动写了 softmax 再送进去，等于 softmax 做了两遍，还会因为中间的数值下溢让梯度变脏。记住：<b>forward 给 logits，损失函数负责剩下的。</b></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 7 · 闸门：两层 MLP 全链推导
+============================================================ -->
+<section class="scene" data-scene="7">
+  <header class="scene-header">
+    <span class="step-label">场景 07 · 闸门</span>
+    <h2 class="scene-title">第一道闸门：白纸手推两层 MLP 的 ∂L/∂W₁</h2>
+    <p class="scene-lead">前面几个场景把零件都配齐了：线性层的三条梯度、ReLU 的对角 Jacobian、softmax+交叉熵的 ŷ−y、以及"反向 = 一串 VJP"。这一节把它们串成一条完整链，从损失 L 一路走回第一个权重 W₁。这是 T2 段一出口闸门 1 的原题，也是 A2 书面题的直接内容——<b>建议先合上书拿纸推一遍，再点开逐步对答案。</b></p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">为什么这道题是"闸门"：它考的不是公式，是串链的能力</h3>
+    <p style="font-size:15px;line-height:1.9;">前面每个场景都只推了"一环"：场景 5 推了一层线性层的梯度，场景 6 推了 softmax+交叉熵。但真实的网络是这些环<b>首尾相接</b>的。能不能把 L 对最前面那个 W₁ 的梯度算出来，检验的是三件事：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>顺序对不对</b>：反向必须从损失出发、从后往前，不能跳步、不能倒着来。</li>
+      <li><b>每环乘的东西对不对</b>：线性层乘 Wᵀ、ReLU 乘 0/1 掩码、到参数时做外积。</li>
+      <li><b>形状对不对</b>：每一步算出来的东西，维度必须和它代表的量一致。</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.9;">这三件事任何一件错了，模型都能照常跑，只是默默学不动或学歪。<b>所以闸门要求"合书手推"——只有能不看书复现整条链，才算真的掌握了反向传播。</b></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">先把战场画出来：网络、每一层的形状、数据往哪流</h3>
+    <div class="formula small">x → z₁ = W₁x + b₁ → h = ReLU(z₁) → z₂ = W₂h + b₂ → p = softmax(z₂) → L = −log p<sub>y</sub></div>
+    <p style="font-size:15px;line-height:1.9;">读这条链：输入 x 先过一个线性层得到 z₁，过 ReLU 得到 h，再过一个线性层得到 z₂（这一类别的分数），softmax 变成概率 p，最后交叉熵得到标量损失 L。<b>每一步的输入输出形状必须提前钉死</b>，否则推导到一半就会乱：</p>
+    <table class="num">
+      <tr><th>量</th><th>形状</th><th>量</th><th>形状</th></tr>
+      <tr><td class="mono">x</td><td class="mono">d_in</td><td class="mono">W₂, b₂</td><td class="mono">C×d_h , C</td></tr>
+      <tr><td class="mono">W₁, b₁</td><td class="mono">d_h×d_in , d_h</td><td class="mono">z₂, p</td><td class="mono">C</td></tr>
+      <tr><td class="mono">z₁, h</td><td class="mono">d_h</td><td class="mono">L</td><td class="mono">标量</td></tr>
+    </table>
+    <figure class="fig">
+      <svg viewBox="0 0 680 300" role="img" aria-label="两层 MLP 的前向数据流与反向梯度链">
+        <defs>
+          <marker id="arw12" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+          <marker id="arw12r" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--warn)"/></marker>
+        </defs>
+        <rect x="14" y="70" width="70" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="49" y="97" font-size="14" text-anchor="middle" fill="var(--fg)">x</text>
+        <text x="49" y="60" font-size="11" text-anchor="middle" fill="var(--fg-3)">d_in</text>
+        <rect x="118" y="70" width="98" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="167" y="97" font-size="13" text-anchor="middle" fill="var(--fg)">z₁=W₁x+b₁</text>
+        <text x="167" y="60" font-size="11" text-anchor="middle" fill="var(--fg-3)">d_h</text>
+        <rect x="250" y="70" width="72" height="44" rx="9" fill="var(--bg-3)" stroke="var(--ok)"/>
+        <text x="286" y="97" font-size="13" text-anchor="middle" fill="var(--fg)">ReLU</text>
+        <text x="286" y="60" font-size="11" text-anchor="middle" fill="var(--fg-3)">h : d_h</text>
+        <rect x="356" y="70" width="98" height="44" rx="9" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="405" y="97" font-size="13" text-anchor="middle" fill="var(--fg)">z₂=W₂h+b₂</text>
+        <text x="405" y="60" font-size="11" text-anchor="middle" fill="var(--fg-3)">C</text>
+        <rect x="488" y="70" width="86" height="44" rx="9" fill="var(--bg-3)" stroke="var(--accent)"/>
+        <text x="531" y="90" font-size="12" text-anchor="middle" fill="var(--fg)">softmax</text>
+        <text x="531" y="106" font-size="12" text-anchor="middle" fill="var(--fg)">+ CE</text>
+        <rect x="608" y="70" width="58" height="44" rx="9" fill="var(--bg-3)" stroke="var(--accent)"/>
+        <text x="637" y="97" font-size="14" text-anchor="middle" fill="var(--fg)">L</text>
+        <line x1="84" y1="92" x2="114" y2="92" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw12)"/>
+        <line x1="216" y1="92" x2="246" y2="92" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw12)"/>
+        <line x1="322" y1="92" x2="352" y2="92" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw12)"/>
+        <line x1="454" y1="92" x2="484" y2="92" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw12)"/>
+        <line x1="574" y1="92" x2="604" y2="92" stroke="var(--fg-3)" stroke-width="1.8" marker-end="url(#arw12)"/>
+        <text x="20" y="46" font-size="11.5" fill="var(--fg-3)">前向 →</text>
+        <!-- 反向 -->
+        <line x1="608" y1="188" x2="580" y2="188" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw12r)"/>
+        <line x1="484" y1="188" x2="456" y2="188" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw12r)"/>
+        <line x1="352" y1="188" x2="324" y2="188" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw12r)"/>
+        <line x1="246" y1="188" x2="218" y2="188" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw12r)"/>
+        <line x1="114" y1="188" x2="86" y2="188" stroke="var(--warn)" stroke-width="2.2" marker-end="url(#arw12r)"/>
+        <text x="20" y="192" font-size="11.5" fill="var(--warn)">← 反向</text>
+        <text x="470" y="210" font-size="11.5" text-anchor="middle" fill="var(--warn)">p−y</text>
+        <text x="405" y="230" font-size="11.5" text-anchor="middle" fill="var(--warn)">×W₂ᵀ</text>
+        <text x="286" y="210" font-size="11.5" text-anchor="middle" fill="var(--warn)">⊙1[z₁&gt;0]</text>
+        <text x="167" y="230" font-size="11.5" text-anchor="middle" fill="var(--warn)">外积 xᵀ → ∂L/∂W₁</text>
+        <text x="340" y="268" font-size="12" text-anchor="middle" fill="var(--fg-3)">反向每退一格，先乘该格的局部 Jacobian，走到参数处再做外积</text>
+      </svg>
+      <figcaption><b>同一个网络，两条走法。</b>上排（灰）是前向：x 一路变身成 L，每一步都标了形状。下排（橙）是反向：从 L 的梯度出发，依次经过 softmax+CE（得到 p−y）、第二个线性层（乘 W₂ᵀ）、ReLU（乘 0/1 掩码）、第一个线性层（与输入 x 做外积得到 ∂L/∂W₁）。<b>把这张图记住，闸门手推就是在纸上复现下排这一串。</b></figcaption>
+    </figure>
+    <p style="font-size:14px;color:var(--fg-2);margin-bottom:0;">这就是 A2 的 ParserModel 的同构版：embedding 查表得到 x → embed_to_hidden → ReLU → dropout → hidden_to_logits → CrossEntropyLoss。形状对上了，代码里的维数就不会错。</p>
+  </div>
+
+  <div class="card stepper" id="gateStepper">
+    <h3 style="margin-top:0">反向：从 L 走回 W₁，共 7 个梯度（每步只用场景 5–6 的规则）</h3>
+    <ol>
+      <li class="step show"><b>第 0 步 · 输出层</b>（场景 6 结论直接用）：<div class="formula small">∂L/∂z₂ = p − y <span class="shp">(C,)</span></div>这个向量就是整条链的"误差信号"，后面每一步都在改造它。为什么它这么重要：整个反向传播本质上是"把这个误差信号一路往前搬运、并在每层按该层的结构变形"。</li>
+      <li class="step"><b>第 1 步 · 第二个线性层</b>（场景 5 三条，δ 取 p−y）：<div class="formula small">∂L/∂W₂ = (p−y)hᵀ <span class="shp">C×d_h</span></div><div class="formula small">∂L/∂b₂ = p−y <span class="shp">C</span> ， ∂L/∂h = W₂ᵀ(p−y) <span class="shp">d_h</span></div>W₂ 的梯度已到手；W₂ᵀ(p−y) 是"传过这层、继续往前"的信号。注意这里同时发生了两件事：<b>参数 W₂ 拿到了自己的梯度（用外积），而误差信号被改造成 W₂ᵀ(p−y) 继续往左传。</b></li>
+      <li class="step"><b>第 2 步 · ReLU</b>（逐元素，Jacobian 是对角阵，写成 ⊙）：<div class="formula small">∂L/∂z₁ = ∂L/∂h ⊙ 1[z₁ &gt; 0] <span class="shp">d_h</span></div><b>死区落点</b>：z₁⁽ⁱ⁾≤0 的位置梯度乘成 0，从此不再更新。这不是近似——是对角 Jacobian 里那个 0 对角元的精确后果。</li>
+      <li class="step"><b>第 3 步 · 第一个线性层</b>（再套一次三条）：<div class="formula small">∂L/∂W₁ = (∂L/∂z₁) xᵀ <span class="shp">d_h×d_in</span></div><div class="formula small">∂L/∂b₁ = ∂L/∂z₁ <span class="shp">d_h</span> ， ∂L/∂x = W₁ᵀ(∂L/∂z₁) <span class="shp">d_in</span></div>∂L/∂x 不是废柴——词向量场景里它就是 embedding 的梯度来源（"表示也一起学"的数学落点）。</li>
+      <li class="step"><b>整条链一句话</b>：<div class="formula small">p−y →（×W₂ᵀ）→ W₂ᵀ(p−y) →（⊙1[z₁&gt;0]）→ ∂L/∂z₁ →（外积 xᵀ）→ ∂L/∂W₁</div>每过一层做两件事：① 乘该层局部 Jacobian（线性层 = Wᵀ，ReLU = 0/1 掩码）；② 到参数时，把误差信号和<b>该层输入</b>做外积。</li>
+      <li class="step"><b>扩展到 batch</b>（A2 的实际形态）：X ∈ R<sup>N×d_in</sup> 每行一个样本，则 Z₁ = XW₁ᵀ + 1b₁ᵀ（N×d_h），∂L/∂W₁ = (∂L/∂Z₁)ᵀX。规律没变，只是"样本维"上求和——单样本 δxᵀ，成批 δᵀX。这就是 slides 反复念叨 "keep track of dimensionality" 的原因。</li>
+      <li class="step"><b>自查清单</b>（写完必过一遍）：① 每个梯度形状 = 参数形状？② 每步只用了"上游×局部"？③ ReLU 掩码乘在哪一步？④ 分叉（b 直连、x 也会被用到别处）有没有漏加？⑤ 最后拿中心差分对账（下一场景）。</li>
+    </ol>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" data-step-next>展开下一步 →</button>
+      <button class="btn btn-ghost" data-step-reset>收起重来</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">batch 形态到底变了什么（配图看形状怎么排）</h3>
+    <p style="font-size:15px;line-height:1.9;">真实训练一次喂 N 个样本（一个 batch），A2 就是这样。把 N 个样本的输入摞成矩阵 X（N×d_in，每行一个样本），会发生两件事：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>前向：多出一维 "N"。</b>Z₁ = XW₁ᵀ + 1b₁ᵀ 是 N×d_h；行是样本、列是隐藏单元。偏置 b₁ 要用广播加到每一行上。</li>
+      <li><b>反向：在样本维上求和。</b>单样本时 ∂L/∂W₁ = δxᵀ；成批时 ∂L/∂W₁ = (∂L/∂Z₁)ᵀX，本质是"把 N 个样本各自的 δxᵀ 加起来"。样本越多，梯度越稳——这正是 mini-batch 的统计意义。</li>
+    </ul>
+    <figure class="fig">
+      <svg viewBox="0 0 680 230" role="img" aria-label="batch 形态：样本维怎么排、反向怎么求和">
+        <defs>
+          <marker id="arw13" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+        </defs>
+        <rect x="30" y="70" width="90" height="90" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="75" y="46" font-size="12" text-anchor="middle" fill="var(--fg-2)">X：N×d_in</text>
+        <text x="75" y="120" font-size="12" text-anchor="middle" fill="var(--fg-3)">N 行</text>
+        <text x="75" y="140" font-size="12" text-anchor="middle" fill="var(--fg-3)">样本</text>
+        <line x1="122" y1="115" x2="168" y2="115" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw13)"/>
+        <rect x="172" y="70" width="90" height="90" fill="var(--bg-3)" stroke="var(--border)"/>
+        <text x="217" y="46" font-size="12" text-anchor="middle" fill="var(--fg-2)">Z₁：N×d_h</text>
+        <text x="217" y="120" font-size="12" text-anchor="middle" fill="var(--fg-3)">行=样本</text>
+        <text x="217" y="140" font-size="12" text-anchor="middle" fill="var(--fg-3)">列=隐藏单元</text>
+        <line x1="264" y1="115" x2="310" y2="115" stroke="var(--fg-3)" stroke-width="2" marker-end="url(#arw13)"/>
+        <text x="345" y="90" font-size="13" fill="var(--fg)">∂L/∂W₁ = (∂L/∂Z₁)ᵀ X</text>
+        <text x="345" y="118" font-size="12" fill="var(--fg-3)">d_h×N · N×d_in = d_h×d_in</text>
+        <text x="345" y="146" font-size="12" fill="var(--warn)">中间的 N 被乘掉 —— 等价于把 N 个样本的 δxᵀ 相加</text>
+        <text x="345" y="176" font-size="12" fill="var(--fg-3)">单样本：δxᵀ（d_h×d_in）</text>
+        <text x="345" y="196" font-size="12" fill="var(--fg-3)">成批：δᵀX（同形，N 在上面求和）</text>
+      </svg>
+      <figcaption><b>batch 只是多了一个"样本维"，规则一个字没变。</b>前向多出一个 N 维（N×d_h）；反向时这个 N 被"求和掉"（通过矩阵乘法），因为每个样本都对参数的梯度有贡献，要全部加起来。记住"单样本 δxᵀ、成批 δᵀX"这一对，A2 里手写 backward 就不会错维数。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">三方对账（本机实跑：手推 vs 中心差分 vs torch.autograd）</h3>
+    <p style="font-size:14px;color:var(--fg-2)">d_in=3, d_h=4, C=3，随机初始化，L = 1.650028：</p>
+    <table class="num">
+      <tr><th>梯度</th><th>max|手推 − 数值|</th><th>max|autograd − 手推|</th></tr>
+      <tr><td class="mono">∂L/∂W₂</td><td>7.6×10⁻¹²</td><td>1.7×10⁻¹⁷</td></tr>
+      <tr><td class="mono">∂L/∂W₁</td><td><b>9.5×10⁻¹¹</b></td><td><b>0.0</b>（逐位相同）</td></tr>
+      <tr><td class="mono">∂L/∂b₁</td><td>1.0×10⁻¹⁰</td><td>—</td></tr>
+      <tr><td class="mono">∂L/∂b₂</td><td>1.6×10⁻¹⁰</td><td>—</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;">手推的 ∂L/∂W₁（4×3，注意<b>第 3 行</b>）：</p>
+    <div class="vec" style="display:block;line-height:1.9;">[[ 0.342610,  0.701722,  0.580039]<br>
+ [ 0.028573,  0.058522,  0.048374]<br>
+ <span style="color:var(--err);font-weight:700;">[ 0.000000,  0.000000,  0.000000]  ← 该隐藏单元 z₁⁽³⁾≤0，死在 ReLU 里</span><br>
+ [−0.021106, −0.043230, −0.035733]]</div>
+    <div class="callout">手推、数值、autograd 三方在小数点后 10 位一致——<b>BPTT 之前的一切机制在这条链上全部兑现</b>。那个全零行不是 bug，是第 2 步 ReLU 掩码的现场尸体。请特别记住：<b>"三方对账"是检验推导的唯一硬标准</b>，不要靠"感觉推对了"。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp6">
+    <div class="cp-head">◈ 检验点 6 · 闸门预演</div>
+    <div>推导链里，∂L/∂W₁ = (∂L/∂z₁)·xᵀ。其中 ∂L/∂z₁ 等于什么？</div>
+    <div class="quiz-opt" data-v="0">A. p − y</div>
+    <div class="quiz-opt" data-v="1">B. W₂ᵀ(p−y) ⊙ 1[z₁&gt;0]</div>
+    <div class="quiz-opt" data-v="2">C. W₂ᵀ(p−y)·xᵀ</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 8 · 数值梯度检查
+============================================================ -->
+<section class="scene" data-scene="8">
+  <header class="scene-header">
+    <span class="step-label">场景 08 · 动手</span>
+    <h2 class="scene-title">梯度检查：用笨办法验聪明办法</h2>
+    <p class="scene-lead">解析梯度推错一个符号，模型不会报错，只会静默地学不动或学歪——没有异常、没有崩溃，只有效果变差。<b>怎么在训练之前发现它？</b>答案是退回一条初中生都懂的近似：用一个"两点连线的斜率"去近似导数，和解析梯度一比。这一节讲清这个笨办法为什么成立、误差从哪来、以及它什么时候该用在什么地方。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">核心思想：用"两点连线的斜率"近似"切线的斜率"</h3>
+    <p style="font-size:15px;line-height:1.9;">导数的几何意义是"曲线在某一点的切线斜率"。可切线的斜率没法直接量——它要两个点，而切线只有一个点。于是用近似：在目标点 θ 左右各取一小步 h，得到两个点，连成一条<b>割线</b>，用割线斜率去逼近切线斜率。写成公式就是<b>中心差分</b>：</p>
+    <div class="formula small">f′(θ) ≈ [ f(θ+h) − f(θ−h) ] / (2h)</div>
+    <p style="font-size:15px;line-height:1.9;">逐项读：θ+h 和 θ−h 是目标点左右两边各一点点；f(θ+h)−f(θ−h) 是"函数值差"；除以 2h（两点之间的总跨度）就是"函数值差 ÷ 自变量差"——标准的斜率。<b>当 h 取很小的时候，割线就趋近于切线。</b>这个近似不需要任何推导，中学生拿直尺在图上画就能理解。</p>
+    <figure class="fig">
+      <svg viewBox="0 0 680 300" role="img" aria-label="割线斜率逼近切线斜率">
+        <defs>
+          <marker id="arw14" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+        </defs>
+        <line x1="60" y1="260" x2="640" y2="260" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw14)"/>
+        <line x1="60" y1="260" x2="60" y2="40" stroke="var(--border)" stroke-width="1.5" marker-end="url(#arw14)"/>
+        <text x="646" y="264" font-size="12" fill="var(--fg-3)">θ</text>
+        <text x="44" y="44" font-size="12" fill="var(--fg-3)">f</text>
+        <!-- 曲线 f(θ)=θ³ -->
+        <polyline points="60,253 168,241 276,219 330,204 384,186 492,138 600,72" fill="none" stroke="var(--accent)" stroke-width="2.6"/>
+        <!-- 切线 -->
+        <line x1="200" y1="244" x2="460" y2="164" stroke="var(--ok)" stroke-width="2" stroke-dasharray="7 5"/>
+        <!-- 割线 -->
+        <line x1="140" y1="250" x2="520" y2="129" stroke="var(--warn)" stroke-width="2.4"/>
+        <!-- 点 -->
+        <circle cx="168" cy="241" r="5.5" fill="var(--warn)"/>
+        <circle cx="492" cy="138" r="5.5" fill="var(--warn)"/>
+        <circle cx="330" cy="204" r="6" fill="var(--fg)"/>
+        <!-- h 标注 -->
+        <line x1="168" y1="272" x2="492" y2="272" stroke="var(--fg-3)" stroke-width="1.4" marker-end="url(#arw14)"/>
+        <text x="330" y="288" font-size="12" text-anchor="middle" fill="var(--fg-3)">总跨度 = 2h</text>
+        <!-- 文字 -->
+        <text x="470" y="120" font-size="13" fill="var(--warn)">割线：两点斜率</text>
+        <text x="120" y="228" font-size="13" fill="var(--ok)">切线：真导数</text>
+        <text x="340" y="196" font-size="12" fill="var(--fg)">θ</text>
+        <text x="150" y="150" font-size="12.5" fill="var(--fg-2)">h 越小，割线越贴近切线</text>
+        <text x="150" y="170" font-size="12.5" fill="var(--fg-3)">→ 估计越准（但见下方误差账）</text>
+      </svg>
+      <figcaption><b>中心差分的几何图像。</b>蓝曲线是 f(θ)，黑点是目标点 θ，绿虚线是真正的切线（斜率 = 真导数）。在 θ 左右各取 h 得到橙点，两点连成割线（橙实线）。<b>h 越小，两个橙点越靠近黑点，割线越贴合切线，估计越准。</b>但"h 越小越好"这句话并不总成立——下一张卡片会说清：h 太小时舍入误差会反噬。</figcaption>
+    </figure>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">亲手拖 h，看误差先降后炸</h3>
+    <p style="font-size:15px;line-height:1.9;">拿一个能心算的函数练手：f(θ) = θ³，在 θ=1 处的真导数 = 3θ² = 3。用中心差分去估它，<b>拖滑块改变 log₁₀(h)</b>，看估计值和误差怎么变：</p>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">log₁₀(h)</span>
+      <input type="range" id="fdH" min="-160" max="0" step="1" value="-40">
+      <span class="slider-val mono" id="fdHV">1e-4</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="fdEst" style="font-size:19px;">3.0000000100</div><div class="k">中心差分估计值</div></div>
+      <div class="stat"><div class="v mono" id="fdErr" style="font-size:19px;">1.0e-8</div><div class="k">|估计 − 真值 3|</div></div>
+      <div class="stat"><div class="v mono" id="fdZone" style="font-size:15px;">截断区</div><div class="k">当前误差由谁主导</div></div>
+    </div>
+    <svg id="fdCurve" viewBox="0 0 640 190" style="width:100%;height:auto;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);"></svg>
+    <p style="font-size:13px;color:var(--fg-3);margin-bottom:0;">横轴 log₁₀(h)，纵轴 log₁₀(误差)，双精度实算。<b>左边上翘 = 舍入误差</b>（~ε/h，ε≈2.2×10⁻¹⁶），<b>右边上翘 = 截断误差</b>（~h²）。谷底在 h* ≈ ε<sup>1/3</sup> ≈ 6×10⁻⁶。</p>
+    <div class="callout">亲手拖一遍会看到：h 从 1 一路缩小，误差先像坐滑梯一样下降（截断误差在变小，因为<b>割线越来越贴切线</b>）；但 h 小到 10⁻⁸ 以下后，误差反而掉头暴涨（舍入误差被除法放大）。<b>中间那段"甜区"才是可用区间</b>——实践取 h = 10⁻⁵~10⁻⁴。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">误差账：为什么是"h² 对 ε/h"</h3>
+    <p style="font-size:15px;line-height:1.9;"><b>截断误差</b>来自"用割线代替切线"这件事本身，可以用 Taylor 展开算清。把 f(θ±h) 在 θ 处展开：</p>
+    <div class="formula small">f(θ±h) = f(θ) ± h·f′(θ) + h²/2·f″(θ) ± h³/6·f‴(θ) + …</div>
+    <p style="font-size:15px;line-height:1.9;">两式相减：正负号使 <b>h 的一次项被对称性消掉</b>（h·f′ 一加一减没了），也把 f(θ) 和偶数次项消掉，剩下 f(θ+h)−f(θ−h) = 2h·f′ + h³/3·f‴ + …。除以 2h：</p>
+    <div class="formula small">[f(θ+h)−f(θ−h)]/2h = f′(θ) + h²/6·f‴(θ) + …　⇒　误差 = O(h²)</div>
+    <p style="font-size:15px;line-height:1.9;">对比<b>单侧差分</b> (f(θ+h)−f(θ))/h = f′ + h/2·f″ = O(h)——它没有对称性来消一次项，误差只有 O(h)。<b>中心差分白赚一阶精度，代价只是多算一次 f。</b>这就是为什么梯度检查都用中心差分而不是单侧。（顺带：slides p78 那页公式写的是两个点却除以 2h，要么是笔误、要么文字层丢了"中点"，正确版本以本页为准。）</p>
+    <p style="font-size:15px;line-height:1.9;"><b>舍入误差</b>来自浮点的有限精度，和上面的推导方向相反。双精度只能存约 16 位有效数字；当 h 很小时，f(θ+h) 与 f(θ−h) 几乎相等，相减时高位数字全被抵消、只剩下浮点的低位噪声，绝对舍入约 ε·|f|。这个噪声再除以 2h，就变成 ~ε/h——<b>h 越小，除法把噪声放得越大</b>。</p>
+    <div class="formula small">总误差 ≈ (h²/6)·|f‴| + (ε|f|)/h　⇒　对 h 求导置零得 h* ≈ (3ε|f|/|f‴|)<sup>1/3</sup> ~ ε<sup>1/3</sup> ≈ 6×10⁻⁶</div>
+    <div class="callout">两条误差一条随 h 减小而减小（截断）、一条随 h 减小而增大（舍入），叠加起来就是一个"U 形"：太大不准、太小更不准。<b>所以实践取 h = 10⁻⁵~10⁻⁴</b>——场景 3、6、7 用 h=10⁻⁴ 拿到 10⁻¹³~10⁻¹⁰ 的对账误差，完全在这本账的预期内。这也解释了为什么梯度检查里"h 改小反而更差"是正常现象，不是你错了。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">判据与纪律：怎么判"对上了"</h3>
+    <p style="font-size:15px;line-height:1.9;">有了数值梯度，就要有一个"算不算对上"的判据。<b>用相对误差，不用绝对误差</b>：</p>
+    <div class="formula small">rel = |g<sub>解析</sub> − g<sub>数值</sub>| / max(10⁻⁸, |g<sub>解析</sub>| + |g<sub>数值</sub>|)</div>
+    <p style="font-size:15px;line-height:1.9;">分母取"两个梯度绝对值之和"（并设一个 10⁻⁸ 的下限防止除零）：这样判据对梯度的<b>量级</b>不敏感——梯度很小和很大时都能给一致的判断。</p>
+    <table class="cmp">
+      <tr><th>rel</th><th>判读</th></tr>
+      <tr><td class="mono">&lt; 1e-7</td><td>通过</td></tr>
+      <tr><td class="mono">1e-7 ~ 1e-4</td><td>可疑——公式可能有结构小错（比如漏了某条支路的相加、ReLU 掩码乘错了位置）</td></tr>
+      <tr><td class="mono">&gt; 1e-4</td><td>基本确定错了</td></tr>
+    </table>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>为什么不用绝对误差</b>：梯度分量有的接近 0，绝对判据会在这些小分量上误报（本来是对的，却因为"绝对差看起来大"被判错）。相对误差消除了量级影响。</li>
+      <li><b>它的定位 = 核对手段，不是训练手段</b>：每个参数要算 2 次完整前向，N 个参数就是 2N 次——训练时用它会慢 N 倍。slides 原话：easy to write, but slow and approximate。</li>
+      <li><b>对不上时先怀疑解析式，最后才怀疑 h</b>（A2 常见坑的根）。h 的合理区间上面已经算给你看了：只要在 10⁻⁵~10⁻⁴，就轮不到"h 选得不好"来背锅。</li>
+    </ul>
+    <div class="callout warn"><b>要区分两件事</b>：梯度检查核对的是"你手推的解析梯度"对不对；它<b>不能</b>替代反向传播去训练。真实训练里我们信任解析梯度（它精确且便宜），只在写代码/推公式时用数值梯度抽检几次。把这两个角色的分工记牢，就不会问"为什么不干脆一直用数值梯度"。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 9 · 激活函数画廊
+============================================================ -->
+<section class="scene" data-scene="9">
+  <header class="scene-header">
+    <span class="step-label">场景 09 · 直觉</span>
+    <h2 class="scene-title">激活函数：四种开关，四种脾气</h2>
+    <p class="scene-lead">场景 2 说过：没有非线性，多层塌成一层。激活函数就是插在层与层之间提供那个"非线性"的零件。可它不止一种——sigmoid、tanh、ReLU、GELU 各有各的脾气。<b>挑激活函数，看的不是函数本身，而是它两件事：函数值是前向算的，导数是反向传的</b>。这一节把四种都拆开，看它们分别在这两件事上表现如何。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先明确激活函数是干什么的</h3>
+    <p style="font-size:15px;line-height:1.9;">它就是一个作用在每个分量上的固定函数：z 进去、f(z) 出来，逐元素、不带参数。它的唯一职责是<b>引入非线性</b>——把"加权和"这种线性运算掰弯。没有它，多层网络等于一层（场景 2 的结合律）；有了它，网络才能逼近复杂的函数。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>为什么"函数值"和"导数"都要看：</b>前向传播算的是函数值（z 变 h），反向传播乘的是局部导数 f′(z)。一个激活函数好不好用，等于问两件事——前向算出的数会不会太极端（影响数值稳定）？反向的导数会不会把梯度连乘时压没或炸掉？<b>sigmoid 的问题不在函数值，而在导数（最大才 0.25）；ReLU 的优点也主要在导数（正半轴恒 1）。</b></p>
+    <div class="callout">一个直观的判据，贯穿全节：网络是"一层乘一个局部导数"连起来传梯度的。如果每层的导数 <b>平均小于 1</b>，连乘几十层就趋近 0（梯度消失）；如果分布上经常 > 1，连乘就爆掉（梯度爆炸）。所以"导数大致在 1 附近、且不饱和"是关键。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">亲手看：四种激活的曲线与导数（点按钮叠加导数）</h3>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <button class="btn" id="actDerivBtn">叠加显示导数 f′(z)</button>
+    </div>
+    <svg id="actSvg" viewBox="0 0 640 400" style="width:100%;height:auto;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);"></svg>
+    <p style="font-size:13px;color:var(--fg-3);margin-bottom:0;">四格：sigmoid / tanh / ReLU / GELU。点按钮后，黄虚线 = 导数 f′(z)。本页曲线由页面实时计算，可复算。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>怎么看这四张图：</b>先看实线（函数值）——sigmoid、tanh 在两端都被"压平"（饱和），ReLU 在负半轴直接躺平。再看虚线（导数）——sigmoid 的导数峰值只有 0.25、两端趋 0；tanh 峰值 1、两端也趋 0；ReLU 的导数只有两个值：正半轴 1、负半轴 0。<b>导数曲线的形状，直接决定了梯度回传时是被衰减、保持、还是被截断。</b></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">逐个点名（公式 + 导数 + 脾气）</h3>
+    <table class="cmp">
+      <tr><th>激活</th><th>公式</th><th>导数</th><th>脾气</th></tr>
+      <tr><td>sigmoid</td><td class="mono">σ(z)=1/(1+e<sup>−z</sup>)</td><td class="mono">σ(z)(1−σ(z)) ≤ 1/4</td><td>两端饱和，导数最大才 0.25——多层连乘梯度急速衰减，深网基本弃用</td></tr>
+      <tr><td>tanh</td><td class="mono">tanh(z) = 2σ(2z)−1</td><td class="mono">1−tanh²(z) ≤ 1</td><td><b>只是缩放平移过的 sigmoid</b>（陡 2 倍、值域 [−1,1]）；零中心比 sigmoid 好用，照样饱和</td></tr>
+      <tr><td>ReLU</td><td class="mono">max(z, 0)</td><td class="mono">1[z&gt;0] ∈ {0,1}</td><td><b>深网第一个该试的</b>：正半轴导数恒 1，梯度不衰减、计算极简；代价 = 负半轴死区（场景 3 见过尸体）</td></tr>
+      <tr><td>GELU</td><td class="mono">x·P(X≤x) ≈ x·σ(1.702x)</td><td class="mono">平滑、负区不硬截断</td><td>Transformer 常用；近 0 处平滑过渡，缓解死区</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;"><b>sigmoid 的导数为什么是 σ(1−σ)：</b>设 σ = 1/(1+e<sup>−z</sup>)，则 dσ/dz = e<sup>−z</sup>/(1+e<sup>−z</sup>)²。把它凑成 σ 的形式：σ(1−σ) = [1/(1+e<sup>−z</sup>)]·[e<sup>−z</sup>/(1+e<sup>−z</sup>)] = e<sup>−z</sup>/(1+e<sup>−z</sup>)²，正好相等。而 σ(1−σ) 在 σ=0.5 处取最大值 0.25，两端 σ→0 或 1 时都趋 0——<b>所以它的导数永远不超过 1/4</b>。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>tanh 与 sigmoid 的关系可以直接验证：</b>2σ(2z)−1 = 2/(1+e<sup>−2z</sup>) − 1 = (1−e<sup>−2z</sup>)/(1+e<sup>−2z</sup>) = tanh(z)。<b>所以"换激活"有时只是换了个坐标系</b>——tanh 是把 sigmoid 拉伸 2 倍、再平移，值域从 (0,1) 变成 (−1,1)。好处是输出零中心（均值更接近 0），对下一层的梯度更友好；坏处是照样会饱和。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">为什么"饱和的导数"会杀死深层网络（配图看连乘）</h3>
+    <p style="font-size:15px;line-height:1.9;">反向传播是一路连乘局部导数。拿 sigmoid 举例：它的导数最大才 0.25。如果每一层都乘一个 0.25，5 层之后就变成 0.25⁵ ≈ 0.001——信号衰减了三个数量级；10 层、20 层更是趋近于 0。<b>这就是"梯度消失"：越靠近输入的层，收到的梯度越小，几乎学不动。</b></p>
+    <figure class="fig">
+      <svg viewBox="0 0 680 240" role="img" aria-label="sigmoid 导数连乘导致梯度消失，ReLU 正半轴保持">
+        <defs>
+          <marker id="arw15" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 z" fill="var(--fg-3)"/></marker>
+        </defs>
+        <!-- sigmoid 行 -->
+        <text x="20" y="52" font-size="13" fill="var(--err)">sigmoid：每层 ×≤0.25</text>
+        <rect x="20" y="66" width="60" height="38" rx="8" fill="rgba(248,113,113,.14)" stroke="var(--err)"/>
+        <text x="50" y="90" font-size="13" text-anchor="middle" fill="var(--fg)">1</text>
+        <rect x="130" y="66" width="60" height="38" rx="8" fill="rgba(248,113,113,.19)" stroke="var(--err)"/>
+        <text x="160" y="90" font-size="13" text-anchor="middle" fill="var(--fg)">0.25</text>
+        <rect x="240" y="66" width="60" height="38" rx="8" fill="rgba(248,113,113,.24)" stroke="var(--err)"/>
+        <text x="270" y="90" font-size="13" text-anchor="middle" fill="var(--fg)">0.063</text>
+        <rect x="350" y="66" width="70" height="38" rx="8" fill="rgba(248,113,113,.29)" stroke="var(--err)"/>
+        <text x="385" y="90" font-size="12" text-anchor="middle" fill="var(--fg)">0.016</text>
+        <rect x="470" y="66" width="86" height="38" rx="8" fill="rgba(248,113,113,.34)" stroke="var(--err)"/>
+        <text x="513" y="90" font-size="12" text-anchor="middle" fill="var(--fg)">→ 0.004 …</text>
+        <text x="580" y="90" font-size="12" fill="var(--err)">→ 0</text>
+        <!-- ReLU 行 -->
+        <text x="20" y="162" font-size="13" fill="var(--ok)">ReLU：正半轴 ×1</text>
+        <rect x="20" y="176" width="60" height="38" rx="8" fill="rgba(52,211,153,.14)" stroke="var(--ok)"/>
+        <text x="50" y="200" font-size="13" text-anchor="middle" fill="var(--fg)">1</text>
+        <rect x="130" y="176" width="60" height="38" rx="8" fill="rgba(52,211,153,.16)" stroke="var(--ok)"/>
+        <text x="160" y="200" font-size="13" text-anchor="middle" fill="var(--fg)">1</text>
+        <rect x="240" y="176" width="60" height="38" rx="8" fill="rgba(52,211,153,.18)" stroke="var(--ok)"/>
+        <text x="270" y="200" font-size="13" text-anchor="middle" fill="var(--fg)">1</text>
+        <rect x="350" y="176" width="70" height="38" rx="8" fill="rgba(52,211,153,.20)" stroke="var(--ok)"/>
+        <text x="385" y="200" font-size="13" text-anchor="middle" fill="var(--fg)">1</text>
+        <rect x="470" y="176" width="86" height="38" rx="8" fill="rgba(52,211,153,.22)" stroke="var(--ok)"/>
+        <text x="513" y="200" font-size="13" text-anchor="middle" fill="var(--fg)">1</text>
+        <text x="580" y="200" font-size="12" fill="var(--ok)">→ 1</text>
+        <text x="340" y="232" font-size="12.5" text-anchor="middle" fill="var(--fg-3)">同一份梯度往回传，每过一层乘以该层的局部导数</text>
+      </svg>
+      <figcaption><b>梯度消失的机制，就是连乘。</b>上排：sigmoid 的导数 ≤ 0.25，往回传 5 层就把梯度乘到千分之一级别，越靠前的层越学不动。下排：ReLU 在正半轴导数恒为 1，往回传多少层都不衰减（代价是负半轴导数 0，会"截断"，见场景 3）。<b>这就是为什么深层网络默认先试 ReLU 而不是 sigmoid。</b></figcaption>
+    </figure>
+    <p style="font-size:15px;line-height:1.9;">反过来也要注意：如果导数经常 > 1（比如某些初始化不当的情形），连乘会让梯度<b>爆炸</b>，更新一步就飞出去。梯度消失和梯度爆炸是同一个"连乘"机制的两面，K03 讲 RNN 时会正式展开。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">死区怎么补救，以及"ReLU 更好"这句话的分量</h3>
+    <p style="font-size:15px;line-height:1.9;">ReLU 的代价是负半轴导数恒 0：一旦某个单元落进负区，它的梯度就永远是 0，再也得不到更新（场景 3 里那整行零就是这个）。补救办法都是"别让负半轴导数硬邦邦地等于 0"：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>Leaky ReLU</b>：负半轴给一个小斜率 0.01z，于是死区里也有一点点梯度，单元有机会爬出来。</li>
+      <li><b>Parametric ReLU（PReLU）</b>：连那个负半轴的斜率也当成参数去学，让网络自己决定"要留多大一条缝"。</li>
+      <li><b>GELU / SiLU / SwiGLU</b>：不做硬截断，而是在 0 附近平滑过渡（GELU ≈ x·σ(1.702x)）。Transformer 里常用，Llama/Qwen 现役用的是 SwiGLU 一类。</li>
+    </ul>
+    <div class="callout warn">经验说法（slides 口径、本仓库未跑对照）："ReLU 训练快、梯度回流好"。机制上由导数表可见——饱和区导数≈0 的激活会把链式法则的连乘因子压向 0，而 ReLU 在正半轴没有这个因子。这条直觉在 K03 梯度消失里会再次兑现。<b>注意分清"机制"和"经验结论"：机制（连乘、导数值）这里推得清清楚楚；"哪个在真实大规模任务上更好"是实验结论，要拿数据说话，不能只靠函数图像下结论。</b></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 10 · 收官
+============================================================ -->
+<section class="scene" data-scene="10">
+  <header class="scene-header">
+    <span class="step-label">场景 10 · 收官</span>
+    <h2 class="scene-title">SGD 落笔 + 期末检验</h2>
+    <p class="scene-lead">前面九个场景，把"损失对每个参数的梯度怎么算"讲完了。梯度到手，只剩最后一步：<b>拿梯度去改参数</b>。这一步叫梯度下降，规则只有一行字。本节讲清它、亲手走几步、再把整章的数学落成一张地图。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">最后一步：用梯度更新参数</h3>
+    <p style="font-size:15px;line-height:1.9;">梯度的含义是"损失在当前位置上升最快的方向"。那要让损失下降，就往<b>反方向</b>走一小步。走多少？由学习率 α 决定。写成式子：</p>
+    <div class="formula">θ<sub>j</sub><sup>new</sup> = θ<sub>j</sub><sup>old</sup> − α · <span class="frac"><span class="num">∂J(θ)</span><span class="den">∂θ<sub>j</sub></span></span></div>
+    <p style="font-size:15px;line-height:1.9;">逐项读：θ<sub>j</sub> 是某个参数；∂J/∂θ<sub>j</sub> 是损失对这个参数的梯度（场景 7 算出来的那类东西）；α 是学习率（步长）；<b>减号是关键</b>——减去梯度就是往下降的方向走。对<b>所有</b>参数同时做这一步，就完成了一次迭代。</p>
+    <p style="font-size:15px;line-height:1.9;">本机实跑最小例：J(θ)=θ³，θ=1，∂J/∂θ = 3θ² = 3，α=0.1 → θ<sub>new</sub> = 1 − 0.1×3 = <b>0.7</b>。slides p19 有一句容易被略过的话：<b>θ 里也包含数据表示（词向量）</b>——场景 7 的 ∂L/∂x 就是更新它们的梯度。<b>这就是"表示学习"（场景 2 提过）最后落地的地方</b>：词向量和权重进的是同一个更新式，没有谁比谁特殊。</p>
+    <p style="font-size:15px;line-height:1.9;">A2 用 Adam 自动调每个参数的步长，但结构与此完全相同——Adam 只是把"固定 α"换成"按梯度历史自适应调整的步长"，梯度的来源更是分毫不差。<b>先把这行 SGD 吃透，Adam 就是它的改良版。</b></p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">亲手走几步：拖 α，点「走一步」，看损失怎么降</h3>
+    <p style="font-size:15px;line-height:1.9;">用一个能看清全貌的损失 J(θ) = (θ−3)²（最小值在 θ=3，梯度 = 2(θ−3)）。拖滑块选学习率 α，点按钮走一步，看是不是在往 θ=3 靠。试试 α 太小（走得慢）、合适（几步就到）、太大（来回震荡甚至飞出去）分别是什么样。</p>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2);min-width:120px;">学习率 α</span>
+      <input type="range" id="sgdAlpha" min="1" max="120" step="1" value="30">
+      <span class="slider-val" id="sgdAlphaV">0.30</span>
+    </div>
+    <svg id="sgdCurve" viewBox="0 0 680 260" style="width:100%;height:auto;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);"></svg>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="sgdTheta">−1.00</div><div class="k">当前 θ</div></div>
+      <div class="stat"><div class="v mono" id="sgdJ">16.00</div><div class="k">损失 J(θ)</div></div>
+      <div class="stat"><div class="v mono" id="sgdGrad">−8.00</div><div class="k">梯度 2(θ−3)</div></div>
+      <div class="stat"><div class="v mono" id="sgdStep">0</div><div class="k">已走步数</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="btn btn-primary" id="sgdStepBtn">走一步 →</button>
+      <button class="btn btn-ghost" id="sgdResetBtn">重置到 θ=−1</button>
+    </div>
+    <div class="callout" id="sgdNote">初始 θ=−1（损失 16）。点「走一步」看它往谷底 3 靠近。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本章数学地图（每个式子都应能默写）</h3>
+    <table class="cmp">
+      <tr><th>对象</th><th>式子</th><th>一句话</th></tr>
+      <tr><td>单节点规则</td><td>下游 = 上游 × 局部</td><td>链式法则的节点化</td></tr>
+      <tr><td>分叉</td><td>∂s/∂y = Σ<sub>支路</sub> ∂s/∂y|<sub>支路i</sub></td><td>被用几次加几次</td></tr>
+      <tr><td>逐元素激活</td><td>J = diag(f′(z))</td><td>对角阵，ReLU 只有 0/1</td></tr>
+      <tr><td>线性层三梯度</td><td>∂s/∂W = δxᵀ，∂s/∂b = δ，∂s/∂x = Wᵀδ</td><td>外积 / 直通 / 转置乘回</td></tr>
+      <tr><td>softmax+CE</td><td>∂J/∂z = ŷ − y</td><td>预测 − 真实</td></tr>
+      <tr><td>两层 MLP</td><td>∂L/∂W₁ = [W₂ᵀ(p−y) ⊙ 1[z₁&gt;0]] xᵀ</td><td>闸门 1 原题</td></tr>
+      <tr><td>中心差分</td><td>f′ ≈ [f(θ+h)−f(θ−h)]/2h，h≈10⁻⁴</td><td>O(h²)，只核对不训练</td></tr>
+      <tr><td>SGD</td><td>θ ← θ − α·∂J/∂θ</td><td>θ 含词向量</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;">如果这张表里每一行你都能<b>合上书默写，并且说清它对应计算图上的哪一步</b>，这一章就算过了。尤其最后一行——它把前面所有梯度收束成一个动作：把参数往梯度反方向推一点点，反复做。</p>
+  </div>
+
+  <div class="card" id="finalQuiz">
+    <h3 style="margin-top:0">期末检验 · 6 题</h3>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">合书自测 · 能讲清才算过</h3>
+    <p style="font-size:14px;color:var(--fg-2)">先合上页面口头回答，再点开对答案。讲不出来的进错题本。</p>
+    <ul class="self-test" id="selfTest"></ul>
+  </div>
+
+  <div class="card score-card">
+    <div style="font-size:14px;color:var(--fg-3);letter-spacing:.1em;text-transform:uppercase;">本章得分</div>
+    <div class="score-big" id="finalScore">0 / 14</div>
+    <p style="color:var(--fg-2);max-width:560px;margin:10px auto 20px;" id="finalMsg"></p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a class="btn btn-primary btn-large" href="index.html" style="text-decoration:none;">回到学习路径 →</a>
+      <button class="btn btn-large" id="resetBtn">重学本章</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本章没能验证的部分（诚实清单）</h3>
+    <ul style="font-size:14px;color:var(--fg-2);line-height:1.9;margin:0;padding-left:18px;">
+      <li>slides 第 22–33、36–55 页的核心公式是图片层，PDF 文字层提取为空；本页场景 5–7 的推导按标准矩阵微积分结果补齐，非 slides 原文。</li>
+      <li>"ReLU 训练快、梯度回流好"与 GELU/SwiGLU 的现役地位是 slides 经验口径，本仓库未跑对照实验（机制部分已推，结论部分未验）。</li>
+      <li>Xavier 初始化与 dropout(p=0.5) 的数值来自 A2 骨架，不是 Lec3 推导内容。</li>
+      <li>本章实测都在"几维、几个单元"的构造网络上，讲机制，不能外推真实规模（塌缩结论是代数恒等式，不代表深网无用）。</li>
+      <li>Lec3 slides p2 标题印成 "Lecture 2"（实际是 Lecture 3），原文如此。</li>
+      <li>场景 10 的 SGD 演示用的是 1 维二次损失，只演示"更新方向与步长"的直觉，不含真实网络的随机性、动量、自适应步长。</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<!-- ================= 底部场景导航 ================= -->
+<div class="scene-footer">
+  <button class="btn" id="prevBtn">← 上一节</button>
+  <div class="dots" id="dots"></div>
+  <button class="btn btn-primary" id="nextBtn">下一节 →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<noscript><p style="padding:100px 20px;text-align:center;">本页需要 JavaScript（全部内容离线本地运行，不联网）。</p></noscript>
+
+<script>
+/* ==== 内联自 assets/k02.js ==== */
+/* ================================================================
+   K02 · 神经网络与反向传播 — 全部交互逻辑
+   纯原生 JS，离线可跑，无依赖。
+   ================================================================ */
+(function () {
+'use strict';
+
+/* ---------------- 工具 ---------------- */
+function $(sel, root) { return (root || document).querySelector(sel); }
+function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+var SVGNS = 'http://www.w3.org/2000/svg';
+function sEl(tag, attrs) {
+  var e = document.createElementNS(SVGNS, tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+  return e;
+}
+function toast(msg) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+
+/* ---------------- 存档 ---------------- */
+var SAVE_KEY = 'cs224n_k02_v2';
+var save = { checks: {}, quiz: {}, tasks: {}, selftest: {}, scene: 0 };
+try {
+  var raw = localStorage.getItem(SAVE_KEY);
+  if (raw) save = JSON.parse(raw);
+} catch (e) {}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+
+var TOTAL = 14; // 6 检验点 + 6 期末题 + 1 XOR 任务 + 1 合书自测
+function score() {
+  var s = 0;
+  Object.keys(save.checks).forEach(function (k) { if (save.checks[k]) s++; });
+  Object.keys(save.quiz).forEach(function (k) { if (save.quiz[k] === true) s++; });
+  if (save.tasks._point) s++;
+  if (save.selftest._point) s++;
+  return s;
+}
+function refreshProgress() {
+  var s = score();
+  $('#progressFill').style.width = (s / TOTAL * 100) + '%';
+  $('#progressLabel').textContent = s + ' / ' + TOTAL;
+  var fs = $('#finalScore'); if (fs) fs.textContent = s + ' / ' + TOTAL;
+  var msg = $('#finalMsg');
+  if (msg) {
+    if (s >= 14) msg.textContent = '满分。闸门 1 已开——拿张白纸，把两层 MLP 的 ∂L/∂W₁ 不看书默推一遍，然后去 T2 验收。';
+    else if (s >= 10) msg.textContent = '主线已通。剩下的分多在「合书自测」——反向传播必须能讲出来才算会。';
+    else if (s >= 5) msg.textContent = '过半。建议重跑场景 3 的计算图推演和场景 7 的闸门推导。';
+    else msg.textContent = '按顺序走 10 个场景。场景 7 的推导是本章命门，别跳。';
+  }
+}
+
+/* ---------------- 主题（与 K01 共享） ---------------- */
+var themeBtn = $('#themeBtn');
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  themeBtn.textContent = t === 'dark' ? '☾ 浅色' : '☀ 深色';
+}
+applyTheme(localStorage.getItem('k01_theme') || 'dark');
+themeBtn.addEventListener('click', function () {
+  var cur = document.documentElement.getAttribute('data-theme');
+  var nxt = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(nxt);
+  localStorage.setItem('k01_theme', nxt);
+});
+
+/* ---------------- 场景路由 ---------------- */
+var scenes = $$('.scene');
+var N = scenes.length;
+var dotsBox = $('#dots');
+var SCENE_NAMES = ['封面', '线性之死', '非线性判定单元', '计算图', '单节点规则', '矩阵微积分', 'softmax 梯度', '闸门推导', '梯度检查', '激活函数', '收官'];
+for (var i = 0; i < N; i++) {
+  (function (i) {
+    var d = el('span', 'dot');
+    d.title = SCENE_NAMES[i] || ('场景 ' + i);
+    d.addEventListener('click', function () { go(i); });
+    dotsBox.appendChild(d);
+  })(i);
+}
+var inited = {};
+function go(i) {
+  i = Math.max(0, Math.min(N - 1, i));
+  scenes.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+  $$('.dot', dotsBox).forEach(function (d, j) { d.classList.toggle('active', j === i); });
+  save.scene = i; persist();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  if (!inited[i]) { inited[i] = true; (SCENE_INIT[i] || function () {})(); }
+  try { history.replaceState(null, '', '#' + i); } catch (e) {}
+}
+$('#prevBtn').addEventListener('click', function () { go(save.scene - 1); });
+$('#nextBtn').addEventListener('click', function () { go(save.scene + 1); });
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') go(save.scene + 1);
+  if (e.key === 'ArrowLeft') go(save.scene - 1);
+});
+
+/* 封面：场景地图 + 开始 */
+(function () {
+  var map = $('#sceneMap');
+  for (var i = 1; i < N; i++) {
+    (function (i) {
+      var c = el('div', 'map-card');
+      c.innerHTML = '<div class="num">' + String(i).padStart(2, '0') + '</div><div class="ttl">' + SCENE_NAMES[i] + '</div>';
+      c.addEventListener('click', function () { go(i); });
+      map.appendChild(c);
+    })(i);
+  }
+  $('#startBtn').addEventListener('click', function () { go(1); });
+})();
+
+/* ---------------- 检验点 ---------------- */
+var CP_ANSWERS = { cp1: '1', cp2: '1', cp3: '1', cp4: '1', cp5: '0', cp6: '1' };
+var CP_EXPLAIN = {
+  cp1: '对。A 两点连线的中点 = B 两点连线的中点 = (0.5, 0.5)：两条同类连线在此交叉，任何一条直线都会把其中两点判反，所以至少错一个——这就是线性不可分。',
+  cp2: '对。结合律：W₃W₂W₁ 还是一个矩阵。深度必须配非线性才有意义。',
+  cp3: '对。z₁⁽²⁾=−2<0，ReLU 局部导数为 0，上游梯度被乘成 0，整行不再更新。',
+  cp4: '对。a 有两条出边：经 a·b 贡献 b=5，经 +a 贡献 1，总梯度 5+1=6。',
+  cp5: '对。δ 是 (4×1)，xᵀ 是 (1×3)，外积 (4×3)，与 W 同形——这就是形状约定。',
+  cp6: '对。先 W₂ᵀ(p−y) 传过第二个线性层，再 ⊙ ReLU 掩码传过激活，最后才轮到外积 xᵀ。'
+};
+$$('.checkpoint').forEach(function (cp) {
+  var id = cp.getAttribute('data-check');
+  var fb = $('.cp-feedback', cp);
+  var opts = $$('.quiz-opt', cp);
+  if (save.checks[id]) {
+    opts.forEach(function (o) { if (o.getAttribute('data-v') === CP_ANSWERS[id]) o.classList.add('correct'); });
+    fb.textContent = CP_EXPLAIN[id]; fb.classList.add('good');
+    return;
+  }
+  opts.forEach(function (o) {
+    o.addEventListener('click', function () {
+      if (save.checks[id]) return;
+      var v = o.getAttribute('data-v');
+      if (v === CP_ANSWERS[id]) {
+        save.checks[id] = true; persist();
+        o.classList.add('correct');
+        fb.textContent = CP_EXPLAIN[id]; fb.className = 'cp-feedback good';
+        refreshProgress();
+        toast('检验点通过 +1');
+      } else {
+        o.classList.add('wrong');
+        fb.textContent = '再想想——可以把上面的实验再做一遍。';
+        fb.className = 'cp-feedback bad';
+        setTimeout(function () { o.classList.remove('wrong'); }, 900);
+      }
+    });
+  });
+});
+
+/* ================================================================
+   各场景初始化（懒加载）
+   ================================================================ */
+var SCENE_INIT = {};
+
+/* ---------- 场景 1：XOR ---------- */
+SCENE_INIT[1] = function () {
+  var svg = $('#xorSvg');
+  var W = 360, PAD = 34, XMIN = -0.4, XMAX = 1.8;
+  function sx(x) { return PAD + (x - XMIN) / (XMAX - XMIN) * (W - 2 * PAD); }
+  function sy(y) { return W - PAD - (y - XMIN) / (XMAX - XMIN) * (W - 2 * PAD); }
+  var PTS = [ // x1, x2, cls (0=A, 1=B)
+    [0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1]
+  ];
+  var mapped = false;
+  function relu(z) { return Math.max(0, z); }
+  function mapPt(p) { return [relu(p[0] + p[1] - 0.5), relu(1.5 - p[0] - p[1])]; }
+
+  // 底：网格 + 坐标轴
+  for (var g = 0; g <= 2; g++) {
+    [0, 0.5, 1, 1.5].forEach(function (t) {
+      svg.appendChild(sEl('line', { x1: sx(t), y1: sy(XMIN), x2: sx(t), y2: sy(XMAX), stroke: 'rgba(148,163,184,.10)' }));
+      svg.appendChild(sEl('line', { x1: sx(XMIN), y1: sy(t), x2: sx(XMAX), y2: sy(t), stroke: 'rgba(148,163,184,.10)' }));
+    });
+    break;
+  }
+  var lineEl = sEl('line', { stroke: '#e2e8f0', 'stroke-width': 2.5, 'stroke-dasharray': '7 5' });
+  svg.appendChild(lineEl);
+  var ptEls = PTS.map(function (p) {
+    var grp = sEl('g');
+    var shape;
+    if (p[2] === 0) {
+      shape = sEl('circle', { r: 11, fill: 'rgba(56,189,248,.25)', stroke: '#38bdf8', 'stroke-width': 2.5 });
+    } else {
+      shape = sEl('rect', { x: -9, y: -9, width: 18, height: 18, transform: 'rotate(45)', fill: 'rgba(251,191,36,.22)', stroke: '#fbbf24', 'stroke-width': 2.5 });
+    }
+    grp.appendChild(shape);
+    svg.appendChild(grp);
+    return grp;
+  });
+  var noteEls = PTS.map(function (p, i) {
+    var t = sEl('text', { 'font-size': 12, 'text-anchor': 'middle', fill: 'rgba(226,232,240,.75)', 'font-weight': 700 });
+    svg.appendChild(t);
+    return t;
+  });
+
+  function curPts() { return mapped ? PTS.map(mapPt) : PTS; }
+
+  function render() {
+    var theta = (+$('#xorTheta').value) * Math.PI / 180;
+    var c = (+$('#xorOff').value) / 100;
+    $('#xorThetaV').textContent = $('#xorTheta').value + '°';
+    $('#xorOffV').textContent = c.toFixed(2);
+    var nx = Math.cos(theta), ny = Math.sin(theta);
+    // 直线：n·p = c；方向 d = (−ny, nx)，中心 p0 = c·n
+    var x0 = c * nx, y0 = c * ny, dx = -ny, dy = nx, T = 4;
+    lineEl.setAttribute('x1', sx(x0 - dx * T)); lineEl.setAttribute('y1', sy(y0 - dy * T));
+    lineEl.setAttribute('x2', sx(x0 + dx * T)); lineEl.setAttribute('y2', sy(y0 + dy * T));
+    var pts = curPts(), good = 0;
+    pts.forEach(function (p, i) {
+      var px = sx(p[0]), py = sy(p[1]);
+      // B 类两点映射后重合，略作偏移避免完全遮挡
+      if (mapped && PTS[i][2] === 1) { px += i === 2 ? -12 : 12; py += i === 2 ? -6 : 6; }
+      ptEls[i].setAttribute('transform', 'translate(' + px + ',' + py + ')');
+      var pred = (nx * p[0] + ny * p[1] > c) ? 0 : 1;
+      var ok = pred === PTS[i][2];
+      if (ok) good++;
+      ptEls[i].style.opacity = ok ? '1' : '.45';
+      noteEls[i].setAttribute('x', px); noteEls[i].setAttribute('y', py - 18);
+      noteEls[i].textContent = (PTS[i][2] === 0 ? 'A' : 'B') + (ok ? '' : ' ✗');
+    });
+    $('#xorScore').textContent = good + ' / 4';
+    if (mapped && good === 4 && !save.tasks._point) {
+      save.tasks._point = true; persist(); refreshProgress();
+      toast('✓ 任务完成：非线性映射后 4/4 可分，+1 分');
+    }
+    $('#xorNote').innerHTML = mapped
+      ? '映射后的空间里，A 两点落在 (0, 1.5) 与 (1.5, 0)，B 两点被一起压到 (0.5, 0.5)——<b>找条直线拿 4/4 试试</b>（提示：θ ≈ 45°，c ≈ 1.0~1.3）。'
+      : '你会发现：不管怎么转、怎么挪，<b>最多分对 3 个</b>。这不是你手残——下面证明给你看。';
+  }
+  $('#xorTheta').addEventListener('input', render);
+  $('#xorOff').addEventListener('input', render);
+  $('#xorMapBtn').addEventListener('click', function () {
+    mapped = true;
+    this.style.display = 'none'; $('#xorBackBtn').style.display = '';
+    $('#xorTheta').value = 45; $('#xorOff').value = 110;
+    render();
+  });
+  $('#xorBackBtn').addEventListener('click', function () {
+    mapped = false;
+    this.style.display = 'none'; $('#xorMapBtn').style.display = '';
+    render();
+  });
+  render();
+};
+
+/* ---------- 场景 3：计算图推演 ---------- */
+SCENE_INIT[3] = function () {
+  var svg = $('#cgSvg');
+  var nodes = [
+    { x: 100, name: 'x', val: '[1, 2]', grad: '[1, 0]' },
+    { x: 330, name: 'z₁', val: '[1, −2]', grad: '[1, 0]' },
+    { x: 560, name: 'h', val: '[1, 0]', grad: '[1, 1]' },
+    { x: 790, name: 's', val: '1.0', grad: '1' }
+  ];
+  var edges = [
+    { a: 0, b: 1, lab: '仿射 W₁,b₁' },
+    { a: 1, b: 2, lab: 'ReLU' },
+    { a: 2, b: 3, lab: '仿射 W₂,b₂' }
+  ];
+  edges.forEach(function (e) {
+    var x1 = nodes[e.a].x + 46, x2 = nodes[e.b].x - 46;
+    svg.appendChild(sEl('line', { x1: x1, y1: 120, x2: x2, y2: 120, stroke: 'rgba(148,163,184,.5)', 'stroke-width': 2 }));
+    var t = sEl('text', { x: (x1 + x2) / 2, y: 105, 'text-anchor': 'middle', 'font-size': 12, fill: 'rgba(148,163,184,.9)' });
+    t.textContent = e.lab; svg.appendChild(t);
+    var t2 = sEl('text', { x: (x1 + x2) / 2, y: 143, 'text-anchor': 'middle', 'font-size': 11, fill: 'rgba(251,191,36,.85)' });
+    t2.textContent = ''; svg.appendChild(t2);
+    e.gradEl = t2;
+  });
+  var nodeEls = nodes.map(function (n) {
+    var g = sEl('g', { 'class': 'cg-node' });
+    g.appendChild(sEl('rect', { x: n.x - 46, y: 84, width: 92, height: 72, rx: 12, fill: 'var(--bg-3)', stroke: 'rgba(148,163,184,.35)', 'stroke-width': 1.5 }));
+    var nm = sEl('text', { x: n.x, y: 112, 'text-anchor': 'middle', 'class': 'cg-name' });
+    nm.textContent = n.name; g.appendChild(nm);
+    var val = sEl('text', { x: n.x, y: 136, 'text-anchor': 'middle', 'class': 'cg-val' });
+    val.textContent = ''; g.appendChild(val);
+    var gr = sEl('text', { x: n.x, y: 196, 'text-anchor': 'middle', 'class': 'cg-grad' });
+    gr.textContent = ''; g.appendChild(gr);
+    svg.appendChild(g);
+    return { g: g, val: val, gr: gr };
+  });
+  var edgeGradLabels = ['∂s/∂W₁ = δ·xᵀ = [[1,2],[0,0]]', '⊙ 1[z₁>0]', '∂s/∂W₂ = 1·hᵀ = [[1,0]]'];
+
+  var STEPS = [
+    { cap: '前向 ①：z₁ = W₁x + b₁ = [1·1+0·2, 0·1+(−1)·2] = [1, −2]。', n: 1, v: true },
+    { cap: '前向 ②：h = ReLU(z₁) = [max(1,0), max(−2,0)] = [1, 0]——第 2 个单元进死区，输出被压成 0。', n: 2, v: true },
+    { cap: '前向 ③：s = W₂h + b₂ = 1·1 + 1·0 = 1.0。前向结束，损失/输出的值到手。', n: 3, v: true },
+    { cap: '反向 ⓪：从终点出发，∂s/∂s = 1（自己对自己的导数）。', n: 3, g: true },
+    { cap: '反向 ①：过「仿射 W₂,b₂」。对参数：∂s/∂W₂ = 上游·输入ᵀ = 1·hᵀ = [[1,0]]；继续前传：∂s/∂h = W₂ᵀ·1 = [1,1]。', n: 2, g: true, e: 2 },
+    { cap: '反向 ②：过「ReLU」。局部导数 = 1[z₁>0] = [1,0]（z₁=−2 的单元导数为 0）。下游 = [1,1] ⊙ [1,0] = [1,0]——第 2 单元的梯度在此被截断。', n: 1, g: true, e: 1 },
+    { cap: '反向 ③：过「仿射 W₁,b₁」。∂s/∂W₁ = [1,0]ᵀ·[1,2] = [[1,2],[0,0]]；∂s/∂x = W₁ᵀ·[1,0] = [1,0]（若 x 是词向量，它就是 embedding 的更新信号）。', n: 0, g: true, e: 0 },
+    { cap: '收工：9 个数全部算完，本机中心差分对账 max|差| = 2.2×10⁻¹³。注意 ∂s/∂W₁ 第 2 行 = [0,0]——死区单元没有梯度回流。', done: true }
+  ];
+  var idx = 0;
+  function render() {
+    nodeEls.forEach(function (ne, i) {
+      ne.val.textContent = ''; ne.gr.textContent = '';
+      ne.g.classList.remove('lit');
+    });
+    edges.forEach(function (e) { e.gradEl.textContent = ''; });
+    nodes.forEach(function (n, i) {
+      for (var k = 0; k < Math.min(idx, STEPS.length); k++) {
+        var st = STEPS[k];
+        if (st.n === i && st.v) nodeEls[i].val.textContent = n.val;
+        if (st.n === i && st.g) nodeEls[i].gr.textContent = '∂s/∂' + n.name + ' = ' + n.grad;
+      }
+    });
+    edges.forEach(function (e, i) {
+      for (var k = 0; k < Math.min(idx, STEPS.length); k++) {
+        if (STEPS[k].e === i) e.gradEl.textContent = edgeGradLabels[i];
+      }
+    });
+    if (idx > 0 && idx <= STEPS.length) {
+      var cur = STEPS[idx - 1];
+      if (cur.n !== undefined) nodeEls[cur.n].g.classList.add('lit');
+      $('#cgCaption').textContent = cur.cap;
+    } else {
+      $('#cgCaption').textContent = '前向：从左到右算每个节点的值。反向：从右到左传梯度，规则只有一条——下游 = 上游 × 局部。';
+    }
+    $('#cgNext').textContent = idx >= STEPS.length ? '已完成 ✓' : ('下一步（' + Math.min(idx + 1, STEPS.length) + '/' + STEPS.length + '）→');
+  }
+  $('#cgNext').addEventListener('click', function () {
+    if (idx >= STEPS.length) { toast('推演完毕——合上书，自己在纸上重走一遍'); return; }
+    idx++; render();
+  });
+  $('#cgReset').addEventListener('click', function () { idx = 0; render(); });
+  render();
+};
+
+/* ---------- 场景 4：分叉相加 ---------- */
+SCENE_INIT[4] = function () {
+  function render() {
+    var a = (+$('#branchA').value) / 10;
+    $('#branchAV').textContent = a.toFixed(1);
+    $('#brY').textContent = (a * a + a).toFixed(2);
+    $('#brP1').textContent = (2 * a).toFixed(2);
+    $('#brP2').textContent = '1.00';
+    $('#brTot').textContent = (2 * a + 1).toFixed(2);
+  }
+  $('#branchA').addEventListener('input', render);
+  render();
+};
+
+/* ---------- 场景 5：形状追踪 ---------- */
+SCENE_INIT[5] = function () {
+  function render() {
+    var m = +$('#shapeM').value, n = +$('#shapeN').value;
+    $('#shapeMV').textContent = m;
+    $('#shapeNV').textContent = n;
+    $('#shX').textContent = n + ' 维';
+    $('#shW').textContent = m + '×' + n;
+    $('#shZ').textContent = m + ' 维';
+    $('#shDelta').textContent = m + ' 维';
+    $('#shGW').textContent = m + '×' + n;
+    $('#shGB').textContent = m + ' 维';
+    $('#shGX').textContent = n + ' 维';
+  }
+  $('#shapeM').addEventListener('input', render);
+  $('#shapeN').addEventListener('input', render);
+  render();
+};
+
+/* ---------- 场景 6：softmax + CE ---------- */
+SCENE_INIT[6] = function () {
+  var names = ['类 1（正确）', '类 2', '类 3'];
+  var barsBox = $('#smBars');
+  var barFills = [], barNums = [];
+  for (var i = 0; i < 3; i++) {
+    var col = el('div', 'bar-col');
+    var num = el('div', 'bar-num', '—');
+    var track = el('div', 'bar-track'); track.style.height = '120px';
+    var fill = el('div', 'bar-fill');
+    if (i === 0) fill.style.background = 'linear-gradient(180deg, var(--ok), var(--accent))';
+    track.appendChild(fill);
+    col.appendChild(num); col.appendChild(track); col.appendChild(el('div', 'bar-label', names[i]));
+    barsBox.appendChild(col);
+    barFills.push(fill); barNums.push(num);
+  }
+  function render() {
+    var z = [ (+$('#smZ1').value) / 10, (+$('#smZ2').value) / 10, (+$('#smZ3').value) / 10 ];
+    $('#smZ1V').textContent = z[0].toFixed(1);
+    $('#smZ2V').textContent = z[1].toFixed(1);
+    $('#smZ3V').textContent = z[2].toFixed(1);
+    var m = Math.max(z[0], z[1], z[2]);
+    var e = z.map(function (v) { return Math.exp(v - m); });
+    var S = e[0] + e[1] + e[2];
+    var p = e.map(function (v) { return v / S; });
+    p.forEach(function (v, i) {
+      barFills[i].style.height = Math.max(1.5, v * 100) + '%';
+      barNums[i].textContent = (v * 100).toFixed(1) + '%';
+    });
+    $('#smJ').textContent = (-Math.log(p[0])).toFixed(4);
+    $('#smG1').textContent = (p[0] - 1).toFixed(3);
+    $('#smG2').textContent = (p[1]).toFixed(3);
+    $('#smG3').textContent = (p[2]).toFixed(3);
+  }
+  ['smZ1', 'smZ2', 'smZ3'].forEach(function (id) { $('#' + id).addEventListener('input', render); });
+  render();
+};
+
+/* ---------- 场景 8：中心差分 ---------- */
+SCENE_INIT[8] = function () {
+  var EPS = 2.2e-16;
+  function central(h) { return (Math.pow(1 + h, 3) - Math.pow(1 - h, 3)) / (2 * h); }
+  function render() {
+    var lg = (+$('#fdH').value) / 10;
+    var h = Math.pow(10, lg);
+    $('#fdHV').textContent = '1e' + (lg === Math.round(lg) ? lg : lg.toFixed(1));
+    var est = central(h);
+    var err = Math.abs(est - 3);
+    $('#fdEst').textContent = est.toPrecision(10);
+    $('#fdErr').textContent = err === 0 ? '0（精确）' : err.toExponential(1);
+    var zone;
+    if (h > 6e-6) zone = '截断区（~h²）';
+    else if (h > 1e-12) zone = '甜区';
+    else zone = '舍入区（~ε/h）';
+    $('#fdZone').textContent = zone;
+    marker(lg, err);
+  }
+  // 误差曲线（实算）
+  var svg = $('#fdCurve'), W = 640, H = 190, padL = 46, padB = 28, padT = 14, padR = 14;
+  var LG0 = -16, LG1 = 0, E0 = -17, E1 = 1;
+  function sx(lg) { return padL + (lg - LG0) / (LG1 - LG0) * (W - padL - padR); }
+  function sy(le) { return padT + (E1 - Math.max(E0, Math.min(E1, le))) / (E1 - E0) * (H - padT - padB); }
+  svg.appendChild(sEl('line', { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, stroke: 'rgba(148,163,184,.4)' }));
+  svg.appendChild(sEl('line', { x1: padL, y1: padT, x2: padL, y2: H - padB, stroke: 'rgba(148,163,184,.4)' }));
+  for (var gx = -16; gx <= 0; gx += 4) {
+    var t = sEl('text', { x: sx(gx), y: H - padB + 16, 'text-anchor': 'middle', 'font-size': 10, fill: 'rgba(148,163,184,.7)' });
+    t.textContent = '1e' + gx; svg.appendChild(t);
+  }
+  [0, -8, -16].forEach(function (gy) {
+    var t = sEl('text', { x: padL - 6, y: sy(gy) + 3, 'text-anchor': 'end', 'font-size': 10, fill: 'rgba(148,163,184,.7)' });
+    t.textContent = '1e' + gy; svg.appendChild(t);
+  });
+  var pts = [];
+  for (var lg = -16; lg <= 0.001; lg += 0.2) {
+    var h = Math.pow(10, lg);
+    var err = Math.abs(central(h) - 3);
+    pts.push(sx(lg) + ' ' + sy(Math.log10(Math.max(err, 1e-17))));
+  }
+  svg.appendChild(sEl('path', { d: 'M' + pts.join(' L'), fill: 'none', stroke: '#38bdf8', 'stroke-width': 2.5 }));
+  // 谷底参考线 h* = 6e-6
+  var tx = sEl('line', { x1: sx(Math.log10(6e-6)), y1: padT, x2: sx(Math.log10(6e-6)), y2: H - padB, stroke: 'rgba(52,211,153,.5)', 'stroke-dasharray': '4 4' });
+  svg.appendChild(tx);
+  var tt = sEl('text', { x: sx(Math.log10(6e-6)) + 5, y: padT + 12, 'font-size': 10, fill: '#34d399' });
+  tt.textContent = 'h* ≈ 6e-6'; svg.appendChild(tt);
+  var mk = sEl('circle', { r: 6, fill: '#fbbf24', stroke: '#0b1020', 'stroke-width': 2 });
+  svg.appendChild(mk);
+  function marker(lg, err) {
+    mk.setAttribute('cx', sx(lg));
+    mk.setAttribute('cy', sy(Math.log10(Math.max(err, 1e-17))));
+  }
+  $('#fdH').addEventListener('input', render);
+  render();
+};
+
+/* ---------- 场景 9：激活函数画廊 ---------- */
+SCENE_INIT[9] = function () {
+  var svg = $('#actSvg');
+  var showD = false;
+  var FNS = [
+    { name: 'sigmoid σ(z)', f: function (z) { return 1 / (1 + Math.exp(-z)); }, d: function (z) { var s = 1 / (1 + Math.exp(-z)); return s * (1 - s); } },
+    { name: 'tanh(z)', f: function (z) { return Math.tanh(z); }, d: function (z) { var t = Math.tanh(z); return 1 - t * t; } },
+    { name: 'ReLU(z)', f: function (z) { return Math.max(0, z); }, d: function (z) { return z > 0 ? 1 : 0; } },
+    { name: 'GELU(z) ≈ z·σ(1.702z)', f: function (z) { return z / (1 + Math.exp(-1.702 * z)); }, d: function (z) { var s = 1 / (1 + Math.exp(-1.702 * z)); return s + z * 1.702 * s * (1 - s); } }
+  ];
+  var panels = [[20, 16], [340, 16], [20, 216], [340, 216]];
+  var PW = 280, PH = 168, ZR = 4;
+  function px(ox, z) { return ox + (z + ZR) / (2 * ZR) * PW; }
+  function py(oy, v, vmin, vmax) { return oy + PH - (v - vmin) / (vmax - vmin) * PH; }
+  function draw() {
+    svg.innerHTML = '';
+    FNS.forEach(function (fn, i) {
+      var ox = panels[i][0], oy = panels[i][1];
+      var vmin = -1.6, vmax = i < 2 ? 1.6 : 4.2;
+      svg.appendChild(sEl('rect', { x: ox, y: oy, width: PW, height: PH, rx: 10, fill: 'var(--bg-3)', stroke: 'rgba(148,163,184,.15)' }));
+      // 零线
+      svg.appendChild(sEl('line', { x1: ox, y1: py(oy, 0, vmin, vmax), x2: ox + PW, y2: py(oy, 0, vmin, vmax), stroke: 'rgba(148,163,184,.25)' }));
+      svg.appendChild(sEl('line', { x1: px(ox, 0), y1: oy, x2: px(ox, 0), y2: oy + PH, stroke: 'rgba(148,163,184,.18)' }));
+      var t = sEl('text', { x: ox + 10, y: oy + 18, 'font-size': 12, 'font-weight': 700, fill: 'rgba(226,232,240,.9)' });
+      t.textContent = fn.name; svg.appendChild(t);
+      // 函数曲线
+      var pts = [];
+      for (var z = -ZR; z <= ZR; z += 0.08) pts.push(px(ox, z) + ' ' + py(oy, fn.f(z), vmin, vmax));
+      svg.appendChild(sEl('path', { d: 'M' + pts.join(' L'), fill: 'none', stroke: '#38bdf8', 'stroke-width': 2.5 }));
+      if (showD) {
+        var dmax = 1.2;
+        var dpts = [];
+        for (var z2 = -ZR; z2 <= ZR; z2 += 0.08) dpts.push(px(ox, z2) + ' ' + py(oy, fn.d(z2), vmin, vmax));
+        svg.appendChild(sEl('path', { d: 'M' + dpts.join(' L'), fill: 'none', stroke: '#fbbf24', 'stroke-width': 2, 'stroke-dasharray': '6 4' }));
+        var dt = sEl('text', { x: ox + PW - 10, y: oy + 18, 'font-size': 11, 'text-anchor': 'end', fill: '#fbbf24' });
+        dt.textContent = "f′(z)"; svg.appendChild(dt);
+      }
+    });
+  }
+  $('#actDerivBtn').addEventListener('click', function () {
+    showD = !showD;
+    this.textContent = showD ? '隐藏导数' : '叠加显示导数 f′(z)';
+    draw();
+  });
+  draw();
+};
+
+/* ---------- 场景 10：期末题 + 合书自测 ---------- */
+SCENE_INIT[10] = function () {
+  /* --- SGD 1D 下降演示 --- */
+  (function () {
+    var TH0 = -1, MIN = 3;
+    var theta = TH0, steps = 0;
+    var svg = $('#sgdCurve');
+    if (!svg) return;
+    var W = 680, H = 260, padL = 50, padR = 30, padT = 24, padB = 40;
+    var TMIN = -1.5, TMAX = 7.5, JMAX = 20;
+    function sx(t) { return padL + (t - TMIN) / (TMAX - TMIN) * (W - padL - padR); }
+    function sy(j) { return H - padB - Math.min(j, JMAX) / JMAX * (H - padT - padB); }
+    var pts = [];
+    for (var t = TMIN; t <= TMAX + 1e-9; t += 0.1) pts.push(sx(t) + ',' + sy((t - MIN) * (t - MIN)));
+    svg.appendChild(sEl('polyline', { points: pts.join(' '), fill: 'none', stroke: 'var(--accent)', 'stroke-width': 2.5 }));
+    svg.appendChild(sEl('line', { x1: padL, y1: H - padB, x2: W - padR, y2: H - padB, stroke: 'var(--border)' }));
+    svg.appendChild(sEl('line', { x1: sx(MIN), y1: padT, x2: sx(MIN), y2: H - padB, stroke: 'rgba(52,211,153,.5)', 'stroke-dasharray': '4 4' }));
+    var tOpt = sEl('text', { x: sx(MIN) + 4, y: padT + 12, 'font-size': 11, fill: 'var(--ok)' });
+    tOpt.textContent = 'θ*=3'; svg.appendChild(tOpt);
+    var tL = sEl('text', { x: padL, y: H - padB + 18, 'font-size': 11, fill: 'var(--fg-3)' });
+    tL.textContent = 'θ'; svg.appendChild(tL);
+    var dot = sEl('circle', { r: 7, fill: 'var(--warn)', stroke: 'var(--bg-0)', 'stroke-width': 2 });
+    svg.appendChild(dot);
+    function render() {
+      var j = (theta - MIN) * (theta - MIN);
+      var g = 2 * (theta - MIN);
+      $('#sgdTheta').textContent = theta.toFixed(2);
+      $('#sgdJ').textContent = j.toFixed(2);
+      $('#sgdGrad').textContent = g.toFixed(2);
+      $('#sgdStep').textContent = steps;
+      dot.setAttribute('cx', sx(Math.max(TMIN, Math.min(TMAX, theta))));
+      dot.setAttribute('cy', sy(j));
+    }
+    $('#sgdAlpha').addEventListener('input', function () {
+      $('#sgdAlphaV').textContent = ((+this.value) / 100).toFixed(2);
+      render();
+    });
+    $('#sgdStepBtn').addEventListener('click', function () {
+      var a = (+$('#sgdAlpha').value) / 100;
+      theta = theta - a * 2 * (theta - MIN);
+      steps++;
+      if (Math.abs(theta - MIN) < 1e-3) $('#sgdNote').innerHTML = '✓ 已经到谷底附近（θ≈3），梯度≈0，几乎不再移动——这就是"收敛"。';
+      else if (a > 0.95) $('#sgdNote').innerHTML = 'α 接近甚至超过 1 会剧烈震荡、甚至越走越远（发散）——学习率过大的典型现象。试试把 α 拖小。';
+      else $('#sgdNote').innerHTML = '第 ' + steps + ' 步：θ ← θ − α·梯度。损失在下降。继续点，看它一步步收敛到谷底。';
+      render();
+    });
+    $('#sgdResetBtn').addEventListener('click', function () {
+      theta = TH0; steps = 0;
+      $('#sgdNote').textContent = '已重置到 θ=−1（损失 16）。';
+      render();
+    });
+    render();
+  })();
+
+  var QUIZ = [
+    { q: '没有非线性激活时，三层线性网络 W₃(W₂(W₁x)) 的表达能力等价于？', opts: ['一个单矩阵线性变换 W′x', '一个三次多项式', '一个三层决策树'], a: 0 },
+    { q: '反向传播里 "+" 节点的行为是？', opts: ['把上游梯度原样分发给每个加数', '把上游梯度全给数值最大的加数', '把两个输入相乘后再传'], a: 0 },
+    { q: '一个节点的输出被下游用了两次（两条出边），它的总梯度是？', opts: ['两条支路梯度的较大者', '两条支路梯度的乘积', '两条支路梯度之和'], a: 2 },
+    { q: 'softmax + 交叉熵对 logits z 的梯度是？', opts: ['ŷ − y', 'y − ŷ', '−log ŷ · y'], a: 0 },
+    { q: '∂s/∂W = δxᵀ 里，δ 和 x 分别是？', opts: ['上游梯度、该层输入', '该层输入、上游梯度', '权重、偏置'], a: 0 },
+    { q: '数值梯度检查（中心差分）的正确定位是？', opts: ['训练时替代反向传播', '核对解析梯度的实现，不参与训练', '估计最优学习率'], a: 1 }
+  ];
+  var box = $('#finalQuiz');
+  QUIZ.forEach(function (item, qi) {
+    var wrap = el('div');
+    wrap.style.margin = '16px 0';
+    var qh = el('div', null, (qi + 1) + '. ' + item.q);
+    qh.style.fontWeight = '600'; qh.style.marginBottom = '6px';
+    wrap.appendChild(qh);
+    var fb = el('div', 'cp-feedback');
+    item.opts.forEach(function (opt, oi) {
+      var o = el('div', 'quiz-opt', String.fromCharCode(65 + oi) + '. ' + opt);
+      if (save.quiz['q' + qi] === true && oi === item.a) o.classList.add('correct');
+      o.addEventListener('click', function () {
+        if (save.quiz['q' + qi] !== undefined) return;
+        if (oi === item.a) {
+          save.quiz['q' + qi] = true;
+          o.classList.add('correct');
+          fb.textContent = '✓ 正确'; fb.className = 'cp-feedback good';
+        } else {
+          save.quiz['q' + qi] = false;
+          o.classList.add('wrong');
+          $$('.quiz-opt', wrap)[item.a].classList.add('correct');
+          fb.textContent = '✗ 已标出正确答案。回到对应场景再看一眼。'; fb.className = 'cp-feedback bad';
+        }
+        persist(); refreshProgress();
+      });
+      wrap.appendChild(o);
+    });
+    wrap.appendChild(fb);
+    box.appendChild(wrap);
+  });
+
+  var SELF = [
+    ['K01 的线性 softmax 分类器死在哪两个地方？', '① 线性决策边界——XOR 这种四个点的问题都解不了；② 输入表示（词向量）固定，不随任务调整。'],
+    ['"没有非线性时多层塌成一层"，为什么？', '矩阵乘法结合律：W₂(W₁x) = (W₂W₁)x，两个矩阵的乘积还是一个矩阵。本机实测两种方式输出差 3.3×10⁻¹⁶（= 机器精度）。'],
+    ['tanh 和 sigmoid 是什么关系？为什么深度网络先试 ReLU？', 'tanh(z) = 2σ(2z) − 1，只是缩放平移过的 sigmoid。先试 ReLU：正半轴导数恒 1，梯度不衰减、计算快；代价是负半轴死区。'],
+    ['单节点反向传播的那一条公式？三个词各指什么？', '下游 = 上游 × 局部。上游 = 损失对本节点输出的梯度；局部 = 本节点输出对输入的导数；下游 = 乘完继续往前传的梯度。'],
+    ['梯度为什么在分叉处相加？', '同一变量的每条出边都是一条独立的依赖路径。全导数 = 沿所有路径的偏导之和（多元链式法则）。y = a²+a 在 a=3 时 = 2a+1 = 7，实测对账一致。'],
+    ['反向传播省的是哪部分计算？', '朴素做法对每个参数单独推整条链，中间因子被重复算 N 次。反向传播从损失出发每层梯度只算一次、存下来复用——前向和反向大 O 复杂度相同。'],
+    ['写出 z = Wx + b 的三个梯度。', '∂s/∂W = δxᵀ（外积），∂s/∂b = δ，∂s/∂x = Wᵀδ。δ = 上游梯度 ∂s/∂z。'],
+    ['两层 MLP 的 ∂L/∂W₁ 完整链（闸门 1 原题）。', 'p−y →（×W₂ᵀ）→ W₂ᵀ(p−y) →（⊙1[z₁>0]）→ ∂L/∂z₁ →（外积 xᵀ）→ ∂L/∂W₁。每层：乘局部 Jacobian；到参数时与该层输入做外积。']
+  ];
+  var ul = $('#selfTest');
+  SELF.forEach(function (pair, i) {
+    var li = el('li');
+    var q = el('div', 'q');
+    q.appendChild(el('span', null, pair[0]));
+    q.appendChild(el('span', 'hint', '先合书口述，再点开'));
+    var a = el('div', 'a', pair[1]);
+    if (save.selftest['s' + i]) li.classList.add('open');
+    q.addEventListener('click', function () {
+      li.classList.toggle('open');
+      if (li.classList.contains('open')) {
+        save.selftest['s' + i] = true;
+        var opened = SELF.every(function (_, j) { return save.selftest['s' + j]; });
+        if (opened && !save.selftest._point) {
+          save.selftest._point = true;
+          toast('合书自测全部过完 +1 分');
+        }
+        persist(); refreshProgress();
+      }
+    });
+    li.appendChild(q); li.appendChild(a);
+    ul.appendChild(li);
+  });
+
+  $('#resetBtn').addEventListener('click', function () {
+    if (!confirm('清空本章所有进度，重新学一遍？')) return;
+    localStorage.removeItem(SAVE_KEY);
+    location.href = 'k02.html';
+  });
+};
+
+/* ---------------- 推导步进器（事件委托） ---------------- */
+document.addEventListener('click', function (e) {
+  var next = e.target.closest('[data-step-next]');
+  var reset = e.target.closest('[data-step-reset]');
+  if (!next && !reset) return;
+  var box = (next || reset).closest('.stepper');
+  var steps = $$('.step', box);
+  if (next) {
+    var hidden = steps.filter(function (s) { return !s.classList.contains('show'); });
+    if (hidden.length === 0) { toast('推导完毕——合上书，自己默写一遍'); return; }
+    hidden[0].classList.add('show');
+    if (hidden.length === 1) toast('最后一步了');
+  } else {
+    steps.forEach(function (s, i) { s.classList.toggle('show', i === 0); });
+  }
+});
+
+/* ---------------- 启动 ---------------- */
+var startScene = 0;
+var h = location.hash.replace('#', '');
+if (h !== '' && !isNaN(+h)) startScene = +h;
+else if (save.scene) startScene = save.scene;
+refreshProgress();
+go(startScene);
+
+})();
+</script>
+</body>
+</html>

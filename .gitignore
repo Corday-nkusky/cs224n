@@ -10,3 +10,10 @@ __pycache__/
 __MACOSX/
 .DS_Store
 *.log
+
+# ---- 站点验收产物（可重新生成）----
+# 重现：node site/tests/smoke.mjs
+# 里面含本机绝对路径（file:///D:/...），不进仓库，避免换机器后误导
+site/tests/screenshots/
+site/tests/screenshots-mobile/
+site/tests/smoke-report.json

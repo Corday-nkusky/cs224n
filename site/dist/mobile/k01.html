@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light dark">
+<title>K01 · 词向量与分布语义 — CS224N 学习路径</title>
+<meta name="description" content="CS224N 第 1 章：词向量与分布语义。沉浸式交互课程，全部数据实跑验证，离线可用。">
+<style>
+/* ==== 内联自 assets/k01.css ==== */
+/* ================================================================
+   CS224N K01 沉浸式课程流 · 共享样式
+   ================================================================ */
+
+/* ---- 变量 ---- */
+:root {
+  --bg-0: #0b1020;
+  --bg-1: #0f172a;
+  --bg-2: #162032;
+  --bg-3: rgba(30,41,59,0.65);
+  --fg: #e2e8f0;
+  --fg-2: #94a3b8;
+  --fg-3: #64748b;
+  --accent: #38bdf8;
+  --accent-2: #818cf8;
+  --ok: #34d399;
+  --warn: #fbbf24;
+  --err: #f87171;
+  --border: rgba(148,163,184,0.12);
+  --radius: 14px;
+  --shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+html[data-theme="light"] {
+  --bg-0: #f8fafc;
+  --bg-1: #ffffff;
+  --bg-2: #f1f5f9;
+  --bg-3: rgba(241,245,249,0.85);
+  --fg: #0f172a;
+  --fg-2: #475569;
+  --fg-3: #94a3b8;
+  --border: rgba(148,163,184,0.25);
+  --shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* ---- 全局 ---- */
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background: var(--bg-0);
+  color: var(--fg);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height:1.6;
+  overflow-x:hidden;
+  transition: background .3s, color .3s;
+}
+button{font-family:inherit}
+
+/* ---- 顶部导航 ---- */
+.top-nav{
+  position:fixed; inset:0 0 auto 0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 20px;
+  background: linear-gradient(180deg, var(--bg-1) 60%, transparent);
+  pointer-events:none;
+}
+.top-nav > *{pointer-events:auto}
+.brand{
+  display:flex; align-items:center; gap:10px;
+  text-decoration:none; color: var(--fg);
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display:grid; place-items:center; font-weight:800; color:#fff; font-size:14px;
+}
+.brand-text{ font-weight:700; letter-spacing:.2px;}
+.brand-text small{ display:block; color:var(--fg-3); font-size:11px; font-weight:500; margin-top:-2px}
+.nav-right{ display:flex; align-items:center; gap:10px;}
+.nav-btn{
+  background: var(--bg-3);
+  border:1px solid var(--border);
+  color: var(--fg-2);
+  border-radius:10px; padding:8px 12px; cursor:pointer; font-size:13px;
+  backdrop-filter: blur(8px);
+  transition: transform .15s, background .2s;
+}
+.nav-btn:hover{ background: var(--bg-2); color: var(--fg);}
+
+/* ---- 进度 ---- */
+.progress-wrap{ display:flex; align-items:center; gap:10px;}
+.progress-track{
+  width:120px; height:6px; border-radius:3px; background: var(--bg-2); overflow:hidden;
+}
+.progress-fill{ height:100%; width:0%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius:3px; transition: width .4s ease;}
+.progress-label{ font-size:12px; color:var(--fg-3); min-width:58px; text-align:right;}
+
+/* ---- 场景容器 ---- */
+.scene-container{ position:relative;}
+.scene{
+  display:none;
+  padding: 90px 22px 120px;
+  max-width: 980px; margin: 0 auto;
+  animation: fadeUp .55s ease both;
+}
+.scene.active{ display:block;}
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(18px);}
+  to   { opacity:1; transform: translateY(0);}
+}
+
+/* ---- 场景公共头 ---- */
+.scene-header{ margin-bottom: 28px;}
+.step-label{ display:inline-block; font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); background: linear-gradient(90deg, rgba(56,189,248,.12), rgba(129,140,248,.12)); padding:4px 10px; border-radius:20px; margin-bottom:10px;}
+.scene-title{ font-size: clamp(26px, 4.5vw, 38px); font-weight:800; line-height:1.15; margin:0 0 10px; letter-spacing:-.02em;}
+.scene-lead{ font-size:18px; color:var(--fg-2); max-width: 720px; margin:0;}
+
+/* ---- 卡片 ---- */
+.card{
+  background: var(--bg-3);
+  border:1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+  margin: 18px 0;
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+  transition: background .3s, border-color .3s;
+}
+.card > :first-child{ margin-top:0;}
+.card > :last-child{ margin-bottom:0;}
+
+/* ---- 布局工具 ---- */
+.grid-2{ display:grid; grid-template-columns: repeat(2, 1fr); gap:16px;}
+.grid-3{ display:grid; grid-template-columns: repeat(3, 1fr); gap:16px;}
+@media (max-width: 860px){ .grid-2, .grid-3{ grid-template-columns: 1fr;}}
+
+/* ---- 按钮 ---- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  background: var(--bg-2); color: var(--fg); border:1px solid var(--border);
+  border-radius: 12px; padding: 10px 18px; cursor:pointer; font-size:14px; font-weight:600;
+  transition: transform .12s, background .2s, box-shadow .2s;
+}
+.btn:hover{ transform: translateY(-1px); background: var(--bg-3);}
+.btn:active{ transform: translateY(0);}
+.btn-primary{ background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#062c36; border:none;}
+.btn-primary:hover{ filter: brightness(1.08);}
+.btn-large{ padding: 14px 28px; font-size:16px; border-radius:14px;}
+.btn-ghost{ background: transparent;}
+
+/* ---- 底部场景导航 ---- */
+.scene-footer{
+  position:fixed; inset: auto 0 0 0; z-index:40;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 14px 20px 18px;
+  background: linear-gradient(0deg, var(--bg-1) 60%, transparent);
+  pointer-events:none;
+}
+.scene-footer > *{ pointer-events:auto;}
+.dots{ display:flex; gap:8px;}
+.dot{
+  width:10px; height:10px; border-radius:50%; background: var(--fg-3); opacity:.35; cursor:pointer; transition: .25s;
+}
+.dot.active{ opacity:1; background: var(--accent); transform: scale(1.15);}
+
+/* ---- 封面特殊 ---- */
+.scene-cover{ text-align:center; padding-top: 120px;}
+.cover-badge{ display:inline-block; font-size:12px; font-weight:700; letter-spacing:.15em; text-transform:uppercase; color:var(--accent-2); border:1px solid var(--border); padding:6px 14px; border-radius:20px; margin-bottom:18px;}
+.cover-title{ font-size: clamp(34px, 6vw, 60px); font-weight:900; line-height:1.05; margin:0 auto 16px; max-width: 900px; letter-spacing:-.03em; background: linear-gradient(135deg, var(--fg) 60%, var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.cover-lead{ font-size: clamp(16px, 2.2vw, 22px); color:var(--fg-2); max-width: 640px; margin: 0 auto 28px;}
+.cover-meta{ color:var(--fg-3); font-size:14px; margin-bottom:32px;}
+.scene-map{ display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px; max-width: 860px; margin: 40px auto 0; text-align:left;}
+.map-card{
+  background: var(--bg-3); border:1px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; transition:.2s;
+}
+.map-card:hover{ border-color: var(--accent); transform: translateY(-2px);}
+.map-card .num{ font-size:12px; color:var(--accent); font-weight:700;}
+.map-card .ttl{ font-size:13px; font-weight:600; margin-top:4px;}
+.map-card.locked{ opacity:.5; cursor:not-allowed;}
+
+/* ---- 交互组件：滑块 ---- */
+.slider-wrap{ display:flex; align-items:center; gap:14px; margin: 12px 0;}
+.slider-wrap input[type=range]{ flex:1; accent-color: var(--accent);}
+.slider-val{ min-width:40px; text-align:center; font-weight:700; color:var(--accent); font-variant-numeric: tabular-nums;}
+
+/* ---- 交互组件：矩阵 ---- */
+.matrix-wrap{ overflow:auto; margin: 10px 0;}
+.matrix{ display:grid; gap:3px; font-size:13px; font-variant-numeric: tabular-nums;}
+.matrix .cell{
+  background: var(--bg-2); border-radius:6px; padding:6px 8px; text-align:center; min-width:36px; transition:.15s;
+}
+.matrix .cell.head{ background: transparent; color:var(--fg-3); font-weight:600; font-size:12px;}
+.matrix .cell.on{ background: rgba(56,189,248,.18); color: var(--accent); font-weight:700;}
+.matrix .cell.sel{ outline: 2px solid var(--accent); }
+
+/* ---- 交互组件：词云/语料 ---- */
+.corpus-line{ display:flex; flex-wrap:wrap; gap:8px; margin: 14px 0;}
+.token{
+  background: var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:14px; font-weight:600; transition:.25s; cursor:default;
+}
+.token.center{ background: rgba(56,189,248,.2); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 3px rgba(56,189,248,.12);}
+.token.context{ background: rgba(129,140,248,.18); border-color: var(--accent-2); color: var(--accent-2);}
+
+/* ---- 交互组件：条形图 ---- */
+.bars{ display:flex; align-items:flex-end; gap:10px; height:160px; padding:10px 0;}
+.bar-col{ flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;}
+.bar-track{ width:100%; background: var(--bg-2); border-radius:8px 8px 0 0; position:relative; overflow:hidden;}
+.bar-fill{ position:absolute; bottom:0; left:0; right:0; border-radius:8px 8px 0 0; background: linear-gradient(180deg, var(--accent), var(--accent-2)); transition: height .6s cubic-bezier(.34,1.56,.64,1);}
+.bar-label{ font-size:12px; color:var(--fg-3); text-align:center;}
+.bar-num{ font-size:13px; font-weight:700; color:var(--fg);}
+
+/* ---- 交互组件：散点 ---- */
+.scatter-box{ position:relative; width:100%; height:280px; background: var(--bg-2); border-radius:12px; border:1px solid var(--border); overflow:hidden;}
+.scatter-point{ position:absolute; transform:translate(-50%,-50%); width:10px; height:10px; border-radius:50%; background: var(--accent); transition: left .4s, top .4s;}
+.scatter-label{ position:absolute; transform:translate(-50%,-120%); font-size:11px; color:var(--fg-2); white-space:nowrap; pointer-events:none;}
+
+/* ---- 测验 ---- */
+.quiz-opt{ display:flex; align-items:center; gap:10px; background: var(--bg-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin:8px 0; cursor:pointer; transition:.15s;}
+.quiz-opt:hover{ border-color: var(--accent-2);}
+.quiz-opt.correct{ border-color: var(--ok); background: rgba(52,211,153,.08);}
+.quiz-opt.wrong{ border-color: var(--err); background: rgba(248,113,113,.08);}
+.quiz-opt input{ accent-color: var(--accent);}
+
+/* ---- 公式块 ---- */
+.katex-display{ margin: 14px 0; overflow-x:auto;}
+
+/* ---- 杂项 ---- */
+.tag{ display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background: rgba(56,189,248,.12); color: var(--accent); margin-right:6px;}
+.tag.ok{ background: rgba(52,211,153,.12); color: var(--ok);}
+.tag.warn{ background: rgba(251,191,36,.12); color: var(--warn);}
+.tag.err{ background: rgba(248,113,113,.12); color: var(--err);}
+
+.callout{ border-left: 3px solid var(--accent); padding-left:14px; margin: 14px 0; color: var(--fg-2);}
+.callout.warn{ border-color: var(--warn);}
+.callout.err{ border-color: var(--err);}
+
+.hidden{ display:none !important;}
+
+/* ---- 推导步进器 ---- */
+.stepper ol{ margin:10px 0 0; padding-left:22px;}
+.stepper .step{ display:none; margin:8px 0; line-height:1.7;}
+.stepper .step.show{ display:list-item; animation: fadeUp .35s ease both;}
+.stepper .step .formula{ margin:8px 0;}
+
+/* ---- 数值表 ---- */
+table.num{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; font-size:14px; margin:10px 0;}
+table.num th, table.num td{ padding:7px 12px; border-bottom:1px solid var(--border); text-align:right;}
+table.num th:first-child, table.num td:first-child{ text-align:left;}
+table.num th{ color:var(--fg-3); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+
+/* ---- 数学高亮 ---- */
+.msym{ font-family: Georgia, "Times New Roman", serif; font-style: italic;}
+.formula.small{ font-size:15px; padding:10px;}
+
+/* ---- 滚动条 ---- */
+::-webkit-scrollbar{ width:8px; height:8px;}
+::-webkit-scrollbar-track{ background: transparent;}
+::-webkit-scrollbar-thumb{ background: var(--fg-3); border-radius:4px;}
+</style>
+<style>
+/* ---------- 本页专用 ---------- */
+.hero-num{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(120px, 22vw, 220px); line-height: .9; font-weight: 900;
+  color: transparent; -webkit-text-stroke: 2px rgba(148,163,184,.35);
+  letter-spacing:-.04em; user-select:none; margin: 10px 0 0;
+}
+.quote{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(20px, 3vw, 28px); font-style: italic; line-height:1.5;
+  border-left: 3px solid var(--accent); padding: 6px 0 6px 20px; margin: 18px 0;
+  color: var(--fg);
+}
+.quote .who{ display:block; font-style: normal; font-size:13px; color:var(--fg-3); margin-top:8px; font-family: inherit;}
+
+.formula{
+  font-family: Georgia, "Times New Roman", serif; font-size: 19px;
+  display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap;
+  padding: 16px 12px; background: var(--bg-2); border:1px solid var(--border); border-radius:12px; margin: 14px 0;
+}
+.frac{ display:inline-flex; flex-direction:column; text-align:center; vertical-align:middle;}
+.frac .num{ border-bottom: 1.5px solid currentColor; padding: 0 7px;}
+.frac .den{ padding: 0 7px;}
+.formula sub, .formula sup{ font-size: 12px;}
+.formula .big{ font-size: 26px; line-height:1;}
+
+.kv{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+.kv .pill{ background:var(--bg-2); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:13px;}
+.kv .pill b{ color: var(--accent);}
+
+.word-chip{
+  display:inline-block; background:var(--bg-2); border:1px solid var(--border); border-radius:10px;
+  padding:8px 14px; margin:4px; cursor:pointer; font-weight:600; font-size:15px; transition:.15s;
+}
+.word-chip:hover{ border-color: var(--accent);}
+.word-chip.picked{ background: rgba(56,189,248,.18); border-color: var(--accent); color: var(--accent);}
+
+.vec{ font-family: Consolas, "Cascadia Code", monospace; font-size:14px; letter-spacing:2px; color: var(--fg-2); background:var(--bg-2); border-radius:8px; padding:8px 12px; display:inline-block;}
+
+.sent{ padding:9px 12px; border-radius:10px; margin:7px 0; background:var(--bg-2); font-size:15px;}
+.sent .t{ background: rgba(56,189,248,.25); color:var(--accent); border-radius:5px; padding:1px 5px; font-weight:700;}
+.sent .n{ color: var(--accent-2); font-weight:600;}
+.sent .n2{ color: var(--fg-2);}
+
+.stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0;}
+.stat{ flex:1; min-width:150px; background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px;}
+.stat .v{ font-size:24px; font-weight:800; color: var(--accent); font-variant-numeric:tabular-nums;}
+.stat .k{ font-size:12px; color:var(--fg-3); margin-top:2px;}
+
+.checkpoint{ border:1px dashed rgba(56,189,248,.4); border-radius: var(--radius); padding:18px 20px; margin:22px 0; background: rgba(56,189,248,.05);}
+.checkpoint .cp-head{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; letter-spacing:.06em; color:var(--accent); text-transform:uppercase; margin-bottom:8px;}
+.cp-feedback{ margin-top:10px; font-size:14px; font-weight:600; min-height:20px;}
+.cp-feedback.good{ color: var(--ok);}
+.cp-feedback.bad{ color: var(--err);}
+
+.mini-card{ background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:16px;}
+.mini-card h4{ margin:0 0 8px; font-size:15px;}
+.mini-card p{ margin:0; font-size:14px; color:var(--fg-2);}
+
+table.cmp{ width:100%; border-collapse:collapse; font-size:14px; margin:12px 0;}
+table.cmp th, table.cmp td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--border);}
+table.cmp th{ color:var(--fg-3); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+
+.self-test{ list-style:none; padding:0; margin:0;}
+.self-test li{ border:1px solid var(--border); border-radius:12px; margin:10px 0; overflow:hidden;}
+.self-test .q{ padding:14px 16px; cursor:pointer; font-weight:600; display:flex; justify-content:space-between; align-items:center; background:var(--bg-2);}
+.self-test .q:hover{ border-color:var(--accent);}
+.self-test .q .hint{ font-size:12px; color:var(--fg-3); font-weight:500;}
+.self-test .a{ display:none; padding:14px 16px; color:var(--fg-2); font-size:14px; border-top:1px solid var(--border);}
+.self-test li.open .a{ display:block; animation: fadeUp .3s ease both;}
+
+.score-card{ text-align:center; padding:30px;}
+.score-big{ font-size:64px; font-weight:900; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+
+.toast{
+  position:fixed; left:50%; bottom:86px; transform:translateX(-50%) translateY(20px);
+  background:var(--bg-1); border:1px solid var(--accent); color:var(--fg); border-radius:12px;
+  padding:10px 18px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.3s; z-index:99;
+  box-shadow: var(--shadow);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0);}
+
+svg text{ font-family: inherit;}
+
+@media (max-width: 720px){
+  .scene{ padding: 76px 16px 110px;}
+  .progress-track{ width:70px;}
+  .brand-text small{ display:none;}
+}
+</style>
+<style>
+
+/* ============================================================
+ * 手机端补丁（build_mobile.py 注入，只存在于单文件版）
+ * 1) iOS 横屏自动放大字号 —— 关掉
+ * 2) 刘海 / 底部手势条 —— 固定栏与正文避开安全区
+ * 3) 手指点不准 —— 抬高按钮、选项、滑块的触摸区
+ * 4) 顶/底固定栏的毛玻璃 —— iOS Safari 要 -webkit- 前缀
+ * 5) 窄屏溢出 —— 表格、SVG 图、矩阵自己横向滚，不许带着整页滚
+ * ========================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-wrap: break-word; }
+
+/* 固定栏毛玻璃前缀 */
+.top-nav, .scene-footer, .card, .nav-btn { -webkit-backdrop-filter: blur(10px); }
+
+/* 安全区：刘海屏不被盖、底部留出手势条 */
+@supports (padding: max(0px)) {
+  .top-nav {
+    padding-top: max(10px, env(safe-area-inset-top));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .scene-footer {
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  .scene {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+}
+
+/* 手指友好的最小点击区 */
+.btn, .nav-btn, .quiz-opt, .map-card, select, input[type=range] { min-height: 44px; }
+.slider-wrap input[type=range] { padding: 12px 0; }
+.dot { width: 13px; height: 13px; }
+.dots { gap: 10px; }
+
+@media (max-width: 860px) {
+  .scene { padding: 78px 14px 112px; }
+  .card { padding: 15px; }
+  .scene-title { line-height: 1.2; }
+  .cover-title { line-height: 1.1; }
+
+  /* 表格在窄屏自己横向滚 */
+  table.num, table.cmp { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 内联 SVG 图：保证最小可读宽度，超出部分让它自己滚 */
+  .fig { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fig svg { min-width: 460px; }
+
+  /* 矩阵 / 条形图 / 代码块 */
+  .matrix-wrap, .bars, pre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* 统计块两列排（若页面用了 4 列 1fr 的 stat-row） */
+  .stat-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* 顶栏：手机上收起副标题，标题单行省略，别挤成两行 */
+  .top-nav { gap: 8px; }
+  .brand-text small { display: none; }
+  .brand-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media print { .top-nav, .scene-footer { display: none !important; } }
+
+</style>
+</head>
+<body>
+
+<!-- ================= 顶部导航 ================= -->
+<nav class="top-nav">
+  <a class="brand" href="index.html">
+    <div class="brand-mark">N</div>
+    <div class="brand-text">CS224N 学习路径<small>K01 · 词向量与分布语义</small></div>
+  </a>
+  <div class="nav-right">
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0 / 14</div>
+    </div>
+    <button class="nav-btn" id="themeBtn">☾ 浅色</button>
+    <a class="nav-btn" href="index.html" style="text-decoration:none;">⌂ 路径</a>
+  </div>
+</nav>
+
+<div class="scene-container" id="scenes">
+
+<!-- ============================================================
+     场景 0 · 封面
+============================================================ -->
+<section class="scene scene-cover" data-scene="0">
+  <div class="cover-badge">CS224N · 第 1 章 · 打样</div>
+  <div class="hero-num">K01</div>
+  <h1 class="cover-title">词向量与分布语义</h1>
+  <p class="cover-lead">一个词的意思，怎么变成计算机能算的东西？<br>学完你将能回答：<b>为什么 king − man + woman ≈ queen。</b></p>
+  <div class="cover-meta">10 个场景 · 11 个交互实验 · 全部数字来自本机实跑</div>
+  <button class="btn btn-primary btn-large" id="startBtn">开始 →</button>
+  <div class="scene-map" id="sceneMap"></div>
+</section>
+
+<!-- ============================================================
+     场景 1 · 旧世界的两次失败
+============================================================ -->
+<section class="scene" data-scene="1">
+  <header class="scene-header">
+    <span class="step-label">场景 01 · 问题</span>
+    <h2 class="scene-title">在词向量之前，我们试过什么？</h2>
+    <p class="scene-lead">要判断两个词"像不像"，先得有个能计算的表示。前两代方案都死在同一件事上。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">第一代：人工词典（WordNet）</h3>
+    <p>语言学家手工编纂"同义词集 + 上下位关系"。它有两个能用的地方，但四个硬伤：</p>
+    <div class="grid-2">
+      <div class="mini-card"><h4>① 语境细微差别丢失</h4><p>"proficient" 被标成 "good" 的同义词——只在部分语境成立。</p></div>
+      <div class="mini-card"><h4>② 追不上新词义</h4><p>wicked / badass / ninja 的"好"义，词典更新永远慢半拍。</p></div>
+      <div class="mini-card"><h4>③ 主观 + 人工维护</h4><p>收录谁、怎么分层，全靠人，且无法覆盖褒贬色彩。</p></div>
+      <div class="mini-card" style="border-color:var(--err)"><h4>④ <span class="tag err">最致命</span>算不出相似度</h4><p>词典里没有"tiger 和 cat 有多像"这个数字。而下游任务要的就是数字。</p></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">第二代：one-hot —— 一个词一位</h3>
+    <p>词表里 5 个词，就给每个词一个长度 5 的向量，属于自己的那位置 1，其余 0。点两个词，看它们的内积（相似度）：</p>
+    <div id="ohWords" style="margin:14px 0;"></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:10px 0;">
+      <div>词 A <span class="vec" id="ohVecA">—</span></div>
+      <div>词 B <span class="vec" id="ohVecB">—</span></div>
+    </div>
+    <div style="font-size:17px;">内积 = <b id="ohDot" style="color:var(--accent);font-size:24px;">?</b> <span id="ohNote" style="color:var(--fg-3);font-size:14px;margin-left:8px;">点两个不同的词试试</span></div>
+    <div class="callout" style="margin-top:14px;">任意两个<b>不同</b>词的 one-hot 向量内积恒为 0 —— 数学上叫<b>正交</b>。自己和自己是 1。<b>这里没有"有点像"这个中间状态。</b>而且这个向量的长度等于词表大小：50 万词 = 50 万维，其中 49.9999 万维是 0。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">把话说严格</h3>
+    <p style="font-size:15px;line-height:1.9;">
+      one-hot 就是<b>标准基向量</b>：词表 V = {w₁,…,w_|V|}，词 w<sub>i</sub> 映到 <span class="msym">e<sub>i</sub></span> ∈ {0,1}<sup>|V|</sup>，第 i 位为 1 其余为 0。
+      内积 <span class="msym">e<sub>i</sub>ᵀe<sub>j</sub></span> = Σ<sub>k</sub> [e<sub>i</sub>]<sub>k</sub>[e<sub>j</sub>]<sub>k</sub> = <b>δ<sub>ij</sub></b>（Kronecker delta：i=j 时为 1，否则 0）。
+      于是 ‖e<sub>i</sub>‖ = 1，cos(e<sub>i</sub>, e<sub>j</sub>) = 0（i≠j），且两两距离 ‖e<sub>i</sub> − e<sub>j</sub>‖ = <b>√2</b>。
+    </p>
+    <p style="font-size:15px;line-height:1.9;">几何图像：所有词站在 |V| 根两两垂直的坐标轴上，彼此等距。这个空间对词<b>没有任何结构</b>——"hotel" 和 "motel" 的距离与 "hotel" 和 "cat" 完全一样。三个推论：</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>维度 = 词表大小</b>：50 万词就要 50 万维，每个向量 99.9998% 是 0；</li>
+      <li><b>相似度恒为 0</b>：内积、余弦全部失效，检索、聚类、类比全部无从谈起；</li>
+      <li><b>泛化不可能</b>：模型在 "motel" 上学到的任何东西，无法迁移给 "hotel"——它们的表示毫不相干。</li>
+    </ul>
+    <div class="callout">顺带预告：word2vec 里那个 V×d 的"嵌入矩阵"，本质上就是把 one-hot 向量左乘一次矩阵的<b>查表简写</b>——e<sub>i</sub>ᵀW = W 的第 i 行。one-hot 没有被消灭，它只是退化成了索引。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp1">
+    <div class="cp-head">◈ 检验点 1</div>
+    <div>hotel 和 motel 意思很近。它们的 one-hot 向量内积是多少？</div>
+    <div class="quiz-opt" data-v="0">A. 0</div>
+    <div class="quiz-opt" data-v="1">B. 1</div>
+    <div class="quiz-opt" data-v="2">C. 取决于词表大小</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 2 · 分布假说
+============================================================ -->
+<section class="scene" data-scene="2">
+  <header class="scene-header">
+    <span class="step-label">场景 02 · 直觉</span>
+    <h2 class="scene-title">不认识一个词？看它的邻居。</h2>
+    <p class="scene-lead">1957 年，语言学家 Firth 说了一句后来统治了 NLP 六十年的话：</p>
+  </header>
+
+  <div class="quote">"You shall know a word by the company it keeps."
+    <span class="who">—— J. R. Firth, 1957 · 一个词的意思，由经常出现在它附近的词给出</span>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">亲自验证一下</h3>
+    <p>假设你不认识高亮的这个词。读几句它出现的句子——读完你大概就懂了：</p>
+    <div style="margin:10px 0;" id="ctxBtns"></div>
+    <div id="ctxSents"></div>
+    <div class="callout">你刚才做的事，就是分布语义：<b>没查字典，只看上下文，就还原出了词义。</b>剩下的问题只有一个——怎么把"看邻居"变成计算机能做的算术。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">从直觉到可计算对象</h3>
+    <p style="font-size:15px;line-height:1.9;">把"邻居"写成数学对象：对词 w，定义它的<b>上下文分布</b>为</p>
+    <div class="formula small">P(c | w) = <span class="frac"><span class="num">count(w, c)</span><span class="den">Σ<sub>c′</sub> count(w, c′)</span></span> ，c ∈ V</div>
+    <p style="font-size:15px;line-height:1.9;">count(w, c) = 全语料里 c 出现在 w 的窗口内的次数。分布假说的操作化版本就是：<b>词 w 的意思 ≈ 这个 |V| 维的概率分布向量</b>。两个词意思近 ⟺ 它们的上下文分布接近（而不是字面接近）。</p>
+    <p style="font-size:15px;line-height:1.9;">注意这个向量是什么——它就是下一场景<b>共现矩阵归一化后的一行</b>。所以场景 3 的"数数"不是拍脑袋的工程手段，它是分布假说最直接的数学化身。后面 word2vec 换的只是<b>得到这个向量的方法</b>（训练代替数数），假说本身没变。</p>
+    <div class="callout">这条假说为什么可信？【直觉】语言里可替换性决定功能：能在相同语境里互换的词，语法和语义角色必然相近（"delicious" 和 "tasty" 能互换的语境远多于 "delicious" 和 "bicycle"）。这不是定理，是语言学经验法则——但它撑起了整个词向量工业。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 3 · 共现矩阵
+============================================================ -->
+<section class="scene" data-scene="3">
+  <header class="scene-header">
+    <span class="step-label">场景 03 · 动手</span>
+    <h2 class="scene-title">把"看邻居"变成数数</h2>
+    <p class="scene-lead">最朴素的实现：固定一个窗口，数每个词旁边出现过谁。数出来的表，叫<b>共现矩阵</b>。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">语料（3 句话，7 个词）</h3>
+    <div class="corpus-line" id="corpusChips"></div>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">窗口 m（中心词左右各看几个词）</span>
+      <input type="range" id="winSlider" min="1" max="2" step="1" value="1">
+      <span class="slider-val" id="winVal">1</span>
+    </div>
+    <button class="btn" id="buildBtn">▶ 逐窗口构建一遍</button>
+    <button class="btn btn-ghost" id="resetMatrixBtn">重置</button>
+
+    <div class="matrix-wrap"><div class="matrix" id="coMatrix"></div></div>
+    <div class="kv">
+      <span class="pill">非零元素 <b id="sparsityPill">0 / 49</b></span>
+      <span class="pill">对称性 <b>max|X − Xᵀ| = 0</b></span>
+      <span class="pill">词表 10 万时稀疏度 <b>&gt; 99.9%</b></span>
+    </div>
+  </div>
+
+  <div class="checkpoint" data-check="cp2">
+    <div class="cp-head">◈ 检验点 2 · 先猜再看</div>
+    <div>窗口 m=1 时，<b>X[like][I]</b>（like 当中心词时旁边是 I 的次数）= ?</div>
+    <div class="quiz-opt" data-v="0">A. 0</div>
+    <div class="quiz-opt" data-v="2">B. 2</div>
+    <div class="quiz-opt" data-v="3">C. 3</div>
+    <div class="cp-feedback"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">严格定义与三个性质</h3>
+    <div class="formula small">X<sub>ij</sub> = <span class="big">∑</span><sub>t=1..T</sub> <span class="big">∑</span><sub>0&lt;|Δ|≤m</sub> ⟦w<sub>t</sub> = i⟧ · ⟦w<sub>t+Δ</sub> = j⟧</div>
+    <p style="font-size:15px;line-height:1.9;">⟦·⟧ 是指示函数（成立为 1 否则 0）。一行式读法：遍历每个位置 t，中心词 i 的 ±m 窗口里每出现一个 j，X<sub>ij</sub> 加 1。</p>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>对称性（可证）</b>：窗口不分左右（+Δ 和 −Δ 都计入），每个词轮流当中心。词对 (i,j) 的每次共现，在"i 当中心"时记入 X<sub>ij</sub>，在"j 当中心"时记入 X<sub>ji</sub>，两次枚举覆盖同样的物理事件 ⇒ X = Xᵀ。上面实测 max|X − Xᵀ| = 0，不是巧合是定理。</li>
+      <li><b>图论视角</b>：X 是一个带权无向图的邻接矩阵——词是顶点，共现次数是边权。（这个词和词之间的图，后面讲降维时还会用到一次。）</li>
+      <li><b>稀疏度的量级</b>：V = 10⁵ ⇒ X 有 10¹⁰ 个格子；就算语料有 10⁹ 个 token、每个位置贡献 2m=8 次计数，总计数 ≈ 8×10⁹，密度上限也只有 ~10⁻³ 量级。<b>99.9% 以上的格子恒为 0</b>。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">原始计数的补救：PPMI（slides 的 hacks 清单的数学核心）</h3>
+    <p style="font-size:15px;line-height:1.9;">原始计数被 "the" 这种词污染：the 跟谁都共现，但什么也说明不了。要看的是"超出随机期望的共现"——<b>点互信息 PMI</b>：</p>
+    <div class="formula small">PMI(i,j) = log <span class="frac"><span class="num">P(i,j)</span><span class="den">P(i)·P(j)</span></span> = log <span class="frac"><span class="num">X<sub>ij</sub> · D</span><span class="den">X<sub>i·</sub> · X<sub>·j</sub></span></span>， PPMI = max(0, PMI)</div>
+    <p style="font-size:15px;line-height:1.9;">其中 D = ΣX，X<sub>i·</sub> 是第 i 行和。PMI &gt; 0 = 比随机更常一起出现；PMI &lt; 0 时样本噪声主导（罕见对），直接截成 0——这就是 slides 那句"use correlation, set negative to 0"的精确含义。配套补丁还有：取对数压计数、min(X, t≈100) 截爆头、删功能词、斜坡窗口（近的词权重高）。</p>
+  </div>
+
+  <div class="callout warn">就算补完，这张表仍有两个结构性的麻烦：<b>维度随词表增长</b>（10 万词 = 10 万×10 万），<b>本质稀疏</b>。直接当词向量用，下游模型被稀疏性拖垮。所以需要压缩——这就是下一场景。</div>
+</section>
+
+<!-- ============================================================
+     场景 4 · SVD 降维
+============================================================ -->
+<section class="scene" data-scene="4">
+  <header class="scene-header">
+    <span class="step-label">场景 04 · 机制</span>
+    <h2 class="scene-title">10 万维的稀疏表，压到几维才不亏？</h2>
+    <p class="scene-lead">上一场景留下两个麻烦：每个词的维度等于词表大小（10 万），其中 <b>99.9% 以上是 0</b>，下游模型没法直接吃。压缩的意思很朴素——<b>用更少的坐标轴去近似原矩阵</b>。<b>判据先说死</b>：把丢掉的元素各自平方、全部加起来、再开根号，得到的那个数叫<b>损失</b>，越小越好；这一场景说的<b>最优</b>只有一个意思——在所有"只许用 k 根轴"的做法里，让这个损失最小的那一个。做到这件事的方法叫<b>奇异值分解（SVD）</b>。本场景只回答一句：k 取几、损失多少。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先看这些坐标轴各自携带多少信息（实测）</h3>
+    <p style="font-size:15px;line-height:1.9;">上一场景那张共现矩阵，被拆成一组互相垂直的新坐标轴。每根轴配一个数，表示它携带多少信息；把这些数从大到小排出来，就是下面这条图（它们叫<b>奇异值</b>）。滑块决定留下前几根。</p>
+    <div class="bars" id="svdBars" style="height:180px;"></div>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">保留前 k 个奇异值</span>
+      <input type="range" id="kSlider" min="1" max="7" step="1" value="2">
+      <span class="slider-val" id="kVal">2</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v" id="svdErr">2.014</div><div class="k">重构误差 ‖X − Xₖ‖（Frobenius 范数）</div></div>
+      <div class="stat"><div class="v" id="svdEnergy">—</div><div class="k">保留的信息量（按奇异值平方和）</div></div>
+    </div>
+    <div class="callout">k 越大误差越小，k = 7 时完美重建。<b>降维的本质：扔掉不重要的坐标轴，换取稠密、短小、抗噪的表示。</b>这就是"每个词一行稠密向量"的第一种来源——纯数数，不训练。</div>
+  </div>
+
+  <details class="card" style="border-style:dashed">
+    <summary style="cursor:pointer;font-size:15px;font-weight:500;color:var(--fg-2);">为什么"留前 k 根轴"就是损失最小的那一个？——严格陈述（主线不需要，可跳过）</summary>
+    <div style="margin-top:12px">
+    <p style="font-size:15px;line-height:1.9;"><b>定理（奇异值分解）</b>：任意实矩阵 X ∈ R<sup>m×n</sup> 都能写成</p>
+    <div class="formula small">X = UΣVᵀ ， UᵀU = I， VᵀV = I， Σ = diag(σ₁ ≥ σ₂ ≥ … ≥ 0)</div>
+    <p style="font-size:15px;line-height:1.9;">U 的列是 XᵀX 的特征向量方向（新坐标轴），σ<sub>i</sub> 量度数据沿第 i 根轴"散开的程度"。<b>截断</b>：只留前 k 个奇异值，得 X<sub>k</sub> = U<sub>k</sub>Σ<sub>k</sub>V<sub>k</sub>ᵀ。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>Eckart–Young 定理</b>：在所有秩 ≤ k 的矩阵 B 中，X<sub>k</sub> 使 ‖X − B‖<sub>F</sub> 最小，且误差有闭式：</p>
+    <div class="formula small">‖X − X<sub>k</sub>‖<sub>F</sub>² = <span class="big">∑</span><sub>i&gt;k</sub> σ<sub>i</sub>²</div>
+    <p style="font-size:15px;line-height:1.9;"><b>用上面的实测数验一遍</b>（k=2）：√(1.1931² + 1.1931² + 0.7775² + 0.7775² + 0²) = √(2×1.4235 + 2×0.6045) = √4.056 = <b>2.014</b> —— 和滑块读数逐位一致。这就是"保留前 k 个 = 最优秩 k 近似"的精确内容。</p>
+    <div class="callout">对称矩阵的特例（我们的 X 就是）：X 对称 ⇒ 特征分解 X = QΛQᵀ，σ<sub>i</sub> = |λ<sub>i</sub>|，U、V 的列同为特征向量（至多差符号）。所以共现矩阵的 SVD 实质是<b>谱分解</b>。</div>
+    </div>
+  </details>
+
+  <div class="card" style="border-color:rgba(251,191,36,.4)">
+    <h3 style="margin-top:0">⚠ 实测翻车现场：k 写的是 2，每个词却只用到 1 个坐标</h3>
+    <p>把这张表压到 k=2 之后，量一量词与词之间的<b>夹角</b>——夹角越小，两个词在图上指的方向越接近。结果极端得可疑：</p>
+    <div class="kv">
+      <span class="pill">like 与 enjoy 的夹角 = <b>0°</b></span>
+      <span class="pill">deep 与 learning 的夹角 = <b>90°</b></span>
+      <span class="pill">I 与 like 的夹角 = <b>90°</b></span>
+    </div>
+    <p style="font-size:14px;color:var(--fg-2)">谜底写在奇异值里：<b>[2.6404, 2.6404 | 1.1931, 1.1931 | 0.7775, 0.7775]</b> 成对相等。这是共现矩阵为<b>二分图</b>的指纹——词分成两组 {I, NLP, deep, flying} 和 {enjoy, learning, like}，组内从不共现。SVD 把两组各铺到一根轴上，组内所有词共线，夹角恒为 0°。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>为什么成对？</b>二分图的邻接矩阵能重排成反对角块 [[0, B], [Bᵀ, 0]]。这种矩阵的特征值以 ±λ 成对出现（若 (x,y) 是 λ 的特征向量，(x,−y) 就是 −λ 的）。σ<sub>i</sub> = |λ<sub>i</sub>|，所以奇异值成对相等——<b>[2.6404, 2.6404 | 1.1931, 1.1931 | 0.7775, 0.7775]</b> 三对，正好对应三组"层"。每对奇异值只撑起一根有效语义轴，同组词全被压到同一射线上，夹角恒为 0°。</p>
+    <div class="callout warn">教训：<b>判据不是"k 写的是几"，而是每个词实际拿到几个线性无关的共现模式。</b>玩具语料能演示机制，不能推断真实效果。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp3">
+    <div class="cp-head">◈ 检验点 3</div>
+    <div>k 从 2 增加到 3，重构误差会怎么变？（拖滑块验证）</div>
+    <div class="quiz-opt" data-v="0">A. 不变</div>
+    <div class="quiz-opt" data-v="1">B. 下降</div>
+    <div class="quiz-opt" data-v="2">C. 上升</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 5 · 相似度几何
+============================================================ -->
+<section class="scene" data-scene="5">
+  <header class="scene-header">
+    <span class="step-label">场景 05 · 动手</span>
+    <h2 class="scene-title">点积会被长度骗，余弦只看方向</h2>
+    <p class="scene-lead">向量有了，"像不像"怎么量化？拖动两个向量，盯着三个读数看。</p>
+  </header>
+
+  <div class="card">
+    <div id="vecPlayground"></div>
+    <div class="stat-row">
+      <div class="stat"><div class="v" id="vDot">—</div><div class="k">点积 u·v（受长度影响）</div></div>
+      <div class="stat"><div class="v" id="vCos">—</div><div class="k">余弦相似度 cos θ（只看方向）</div></div>
+      <div class="stat"><div class="v" id="vAngle">—</div><div class="k">夹角 θ</div></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" data-task="1">任务① 让 cos = 1.00</button>
+      <button class="btn" data-task="0">任务② 让 cos = 0.00</button>
+      <button class="btn" data-task="-1">任务③ 让 cos = −1.00</button>
+      <button class="btn btn-ghost" id="vecReset">重置</button>
+    </div>
+    <div class="callout" style="margin-top:14px;">同一个方向，把向量拉长 10 倍，点积涨 10 倍，余弦不变。<b>词向量比相似度时，几乎总是用余弦</b>——词频会改变长度，但不应该改变"意思"。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">三个量的严格关系</h3>
+    <div class="formula small">u·v = <span class="big">∑</span><sub>i</sub> u<sub>i</sub>v<sub>i</sub> ， ‖u‖ = √(u·u) ， cos θ = <span class="frac"><span class="num">u·v</span><span class="den">‖u‖·‖v‖</span></span></div>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>Cauchy–Schwarz 不等式</b>：|u·v| ≤ ‖u‖·‖v‖，等号 ⟺ 两向量共线。两边同除 ‖u‖‖v‖ 得 <b>cos ∈ [−1, 1]</b> —— 余弦的值域不是约定，是定理。</li>
+      <li><b>等价视角</b>：cos θ = û·v̂（归一化后的点积）。先除掉长度再比，所以"只看方向"。</li>
+      <li><b>几何来源</b>：由余弦定理 ‖u−v‖² = ‖u‖²+‖v‖²−2‖u‖‖v‖cosθ 反解即得——"cos 是夹角的余弦"不是定义套定义。</li>
+      <li><b>词向量场景为什么必须归一化</b>：高频词的向量范数往往更大（更多更新机会），若用点积，"常见"会冒充"相似"。余弦把这个混杂因素除掉。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 6 · word2vec 目标
+============================================================ -->
+<section class="scene" data-scene="6">
+  <header class="scene-header">
+    <span class="step-label">场景 06 · 概念</span>
+    <h2 class="scene-title">word2vec：不数数了，让模型自己学</h2>
+    <p class="scene-lead">第二条路：设一个<b>代理任务</b>——用中心词预测它旁边的词。预测准不准不重要，<b>为了预测而被迫学出来的向量，才是我们要的。</b></p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">窗口滑过语料，每个位置都是一道题</h3>
+    <div class="corpus-line" id="w2vSent"></div>
+    <div style="display:flex;gap:8px;margin:8px 0;">
+      <button class="btn" id="wPrev">← 上一格</button>
+      <button class="btn" id="wPlay">▶ 自动播放</button>
+      <button class="btn" id="wNext">下一格 →</button>
+    </div>
+    <p style="font-size:14px;color:var(--fg-2);margin:6px 0 12px;" id="w2vCap"></p>
+    <div class="bars" id="softmaxBars" style="height:150px;"></div>
+    <p style="font-size:13px;color:var(--fg-3);">↑ 给定中心词（金色）后，模型对整个词表算 P(上下文词 | 中心词)。理想状态：真实邻居的概率被推高。（此处为示意分布）</p>
+  </div>
+
+  <div class="formula">
+    P(o|c) = <span class="frac"><span class="num">exp( u<sub>o</sub>ᵀ v<sub>c</sub> )</span><span class="den">∑<sub>w∈V</sub> exp( u<sub>w</sub>ᵀ v<sub>c</sub> )</span></span>
+  </div>
+  <div class="formula" style="font-size:17px;">
+    J(θ) = −<span class="frac"><span class="num">1</span><span class="den">T</span></span> <span class="big">∑</span><sub>t=1..T</sub> <span class="big">∑</span><sub>−m≤j≤m, j≠0</sub> log P( w<sub>t+j</sub> | w<sub>t</sub> ; θ )
+  </div>
+
+  <div class="grid-2">
+    <div class="mini-card"><h4>每个词有两套向量</h4><p>当中心词时用 <b>v</b>，当上下文词时用 <b>u</b>。分开两套优化更容易；最后可以平均。参数量 = 2 × d × V，全部塞进一个长向量 θ 一起梯度下降。</p></div>
+    <div class="mini-card"><h4>最小化 J ⟺ 最大化预测准确率</h4><p>J 是"平均负对数似然"。log 把乘概率变成加损失，负号把"越大越好"翻成"越小越好"——梯度下降的标准形状。</p></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">从似然到 J(θ)：四步变形</h3>
+    <ol style="font-size:15px;line-height:1.9;">
+      <li><b>似然</b>：窗口滑过语料，每个中心词 w<sub>t</sub> 预测窗口内每个 w<sub>t+j</sub>。假设各预测独立，整段语料的似然是连乘 L(θ) = ∏<sub>t</sub> ∏<sub>−m≤j≤m, j≠0</sub> P(w<sub>t+j</sub>|w<sub>t</sub>; θ)。</li>
+      <li><b>取 log</b>：连乘变连加（数值上防下溢，解析上拆开乘积）。</li>
+      <li><b>加负号</b>：最大化似然 ⟺ 最小化负对数似然——梯度下降要"越小越好"。</li>
+      <li><b>除 T</b>：取平均，让损失尺度不随语料长度变。得页面顶部那个 J(θ)。</li>
+    </ol>
+  </div>
+
+  <div class="card stepper" id="derivStepper">
+    <h3 style="margin-top:0">本课最重要推导：∂J/∂v<sub>c</sub>（点击逐步展开，建议先拿纸自己推）</h3>
+    <ol>
+      <li class="step show">只看一个窗口的损失：J<sub>t</sub> = −log P(o|c) = <b>−u<sub>o</sub>ᵀv<sub>c</sub> + log Σ<sub>w∈V</sub> exp(u<sub>w</sub>ᵀv<sub>c</sub>)</b>。两项分工：第一项拉高分母外真实邻居的分数，第二项（log-sum-exp）压制全体。</li>
+      <li class="step">第一项对 v<sub>c</sub> 求导：∇(−u<sub>o</sub>ᵀv<sub>c</sub>) = <b>−u<sub>o</sub></b>。（线性函数，梯度就是系数。）</li>
+      <li class="step">第二项是 log-sum-exp。对 v<sub>c</sub> 求导用链式法则：外层 d/dx log x = 1/x，内层每个 exp(u<sub>w</sub>ᵀv<sub>c</sub>) 贡献 exp(u<sub>w</sub>ᵀv<sub>c</sub>)·u<sub>w</sub>。合起来 = Σ<sub>w</sub> [exp(u<sub>w</sub>ᵀv<sub>c</sub>) / Σ<sub>w′</sub> exp(u<sub>w′</sub>ᵀv<sub>c</sub>)] · u<sub>w</sub> = <b>Σ<sub>w</sub> P(w|c) · u<sub>w</sub></b>。</li>
+      <li class="step">合并：<div class="formula small">∂J<sub>t</sub>/∂v<sub>c</sub> = <span class="big">∑</span><sub>w∈V</sub> P(w|c)·u<sub>w</sub> − u<sub>o</sub> = E<sub>w~P(·|c)</sub>[u<sub>w</sub>] − u<sub>o</sub></div><b>"期望"减"现实"</b>：模型当前认为的平均上下文，减去真正出现的那个词。</li>
+      <li class="step">梯度下降更新 v<sub>c</sub> ← v<sub>c</sub> − η·∂J/∂v<sub>c</sub> = v<sub>c</sub> + η(u<sub>o</sub> − Σ<sub>w</sub> P(w|c)u<sub>w</sub>)：<b>把中心词向量拉向真实邻居、推离全表概率加权平均</b>。P(w|c) 大的词被推得最狠——模型对自己的高置信错误纠正最用力。</li>
+      <li class="step">对上下文向量的梯度（同法可得）：∂J<sub>t</sub>/∂u<sub>o</sub> = (P(o|c) − 1)·v<sub>c</sub>；∂J<sub>t</sub>/∂u<sub>w≠o</sub> = P(w|c)·v<sub>c</sub>。<b>注意第二个式子对全部 V−1 个词都非零</b>——记住它，场景 7 的灾难就从这里来。</li>
+    </ol>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" data-step-next>展开下一步 →</button>
+      <button class="btn btn-ghost" data-step-reset>收起重来</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">手算一遍（3 词词表，全部数字可对账）</h3>
+    <p style="font-size:15px;">取 V = {o, x, y}，当前参数 v<sub>c</sub> = (1, 0.5)，u<sub>o</sub> = (1, 0)，u<sub>x</sub> = (0, 1)，u<sub>y</sub> = (1, 1)。真实上下文是 o。</p>
+    <table class="num">
+      <tr><th>w</th><th>u<sub>w</sub>ᵀv<sub>c</sub></th><th>exp(·)</th><th>P(w|c)</th></tr>
+      <tr><td>o（真实）</td><td>1.0</td><td>2.718</td><td><b>0.307</b></td></tr>
+      <tr><td>x</td><td>0.5</td><td>1.649</td><td>0.186</td></tr>
+      <tr><td>y</td><td>1.5</td><td>4.482</td><td>0.506</td></tr>
+      <tr><td>合计</td><td>—</td><td>8.849</td><td>1.000</td></tr>
+    </table>
+    <p style="font-size:15px;line-height:1.9;">梯度 = ΣP(w|c)u<sub>w</sub> − u<sub>o</sub> = 0.307·(1,0) + 0.186·(0,1) + 0.506·(1,1) − (1,0) = (<b>−0.186</b>, <b>0.693</b>)。取 η=0.1 更新：v<sub>c</sub> ← (1.019, 0.431)。</p>
+    <p style="font-size:15px;line-height:1.9;">更新后重算：三个分数变成 1.019 / 0.431 / 1.449，softmax 得 P(o|c) = 2.770 / 8.569 = <b>0.323</b>——一步梯度，真实邻居的概率 0.307 → 0.323。<b>梯度方向兑现了它的承诺。</b>同时注意：模型最自信的错误（y，P=0.506）在梯度里权重最大。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">为什么必须 SGD</h3>
+    <p style="font-size:15px;line-height:1.9;">J(θ) 是对<b>全体窗口</b>求和：T 个位置 × 2m 个上下文。真实语料 T ~ 10⁹，一次全量梯度要扫几十亿个窗口才算一步——不可行。<b>SGD：每（小批）窗口立刻更新一次</b>，用噪声换速度，噪声本身还有正则化效果。另外 slides 明说：这个目标<b>可能非凸</b>（"our objectives may not be convex... But life turns out to be okay"）——没有最优性保证，但实践中足够好。参数量回忆一下：θ ∈ R<sup>2dV</sup>（d 维 × V 词 × 2 套）。</p>
+  </div>
+
+  <div class="checkpoint" data-check="cp4">
+    <div class="cp-head">◈ 检验点 4</div>
+    <div>P(o|c) 的分母 ∑<sub>w∈V</sub> 要对谁求和？</div>
+    <div class="quiz-opt" data-v="0">A. 窗口里的 2m 个词</div>
+    <div class="quiz-opt" data-v="1">B. 整个词表 V 个词</div>
+    <div class="quiz-opt" data-v="2">C. 采样出来的 K 个负例</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 7 · 代价与减法
+============================================================ -->
+<section class="scene" data-scene="7">
+  <header class="scene-header">
+    <span class="step-label">场景 07 · 问题</span>
+    <h2 class="scene-title">softmax 的分母，贵得离谱</h2>
+    <p class="scene-lead">词表 10 万、向量 300 维时，<b>每一个训练对</b>的代价（实测推算）：</p>
+  </header>
+
+  <div class="card">
+    <div class="bars" id="costBars" style="height:200px;"></div>
+    <p style="font-size:13px;color:var(--fg-3);margin-bottom:0;">naive softmax：每个训练对要算 V×d 次乘加。两种优化把它打低 4~5 个数量级。（V=100000, d=300, K=5）</p>
+  </div>
+
+  <h3>分母其实制造了三类问题，别混为一谈</h3>
+  <div class="grid-3">
+    <div class="mini-card"><h4>① 前向算得慢</h4><p>每个训练对的分母要算 V 个点积 + V 次 exp：O(V·d)。全语料 T·2m 个训练对 ⇒ O(T·m·V·d)。V=10⁵、d=300 时，单对 3×10⁷ 次乘加，比一次前向本该有的代价贵 5 个数量级。</p></div>
+    <div class="mini-card" style="border-color:var(--err)"><h4>② <span class="tag err">更致命</span>反向梯度变稠密</h4><p>场景 6 推过：∂J/∂u<sub>w</sub> = P(w|c)·v<sub>c</sub>，对<b>所有</b> w≠o 都非零 ⇒ 每个训练对要回写整张 V×d 的 u 矩阵。原论文卖点 <i>"does not involve dense matrix multiplications"</i> 被这一条直接毁掉——① 只是慢，② 把"稀疏更新"的系统结构破坏了。</p></div>
+    <div class="mini-card"><h4>③ 目标错配</h4><p>softmax 强制 V 个词概率互斥竞争——这是为了得到合法分布。但我们不要概率，只要向量。为一个不需要的性质付了 ①② 两笔账。</p></div>
+  </div>
+
+  <div class="callout">第③条恰恰是合法化的来源。原论文：skip-gram <i>"只关心学到高质量向量表示，所以我们可以随意简化目标函数"</i>。于是——把"V 选 1"的多选题，换成 K+1 道"是不是真邻居"的判断题（<b>负采样</b>）；或者把词挂到二叉树叶子，沿路径做一串二分类（<b>层次 softmax</b>）。</div>
+
+  <div class="card">
+    <h3 style="margin-top:0">三种方案的单训练对代价（V=10⁵, d=300, K=5）</h3>
+    <table class="num">
+      <tr><th>方案</th><th>代价公式</th><th>乘加次数</th><th>相对 naive</th><th>产出是合法概率？</th></tr>
+      <tr><td>naive softmax</td><td>O(V·d)</td><td>30,000,000</td><td>1×</td><td>是</td></tr>
+      <tr><td>层次 softmax</td><td>O(L·d)，L≈log₂V</td><td>5,100</td><td>1.7×10⁻⁴×</td><td><b>是</b>（关键优势）</td></tr>
+      <tr><td>负采样</td><td>O((1+K)·d)</td><td>1,800</td><td>0.6×10⁻⁴×</td><td>否（分数不是概率）</td></tr>
+    </table>
+    <p style="font-size:14px;color:var(--fg-2);margin-bottom:0;">层次 softmax 的 L 是叶子深度：平衡树 L=log₂V≈16.6，哈夫曼树按词频加权的期望深度更短（下一场景实测 8.49）。</p>
+  </div>
+
+  <div class="checkpoint" data-check="cp5">
+    <div class="cp-head">◈ 检验点 5</div>
+    <div>负采样把"从 V 个词里选 1 个"换成了什么？</div>
+    <div class="quiz-opt" data-v="0">A. K+1 个二分类判断</div>
+    <div class="quiz-opt" data-v="1">B. 一棵二叉树上的路径</div>
+    <div class="quiz-opt" data-v="2">C. 更小的词表</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 8 · 负采样与哈夫曼
+============================================================ -->
+<section class="scene" data-scene="8">
+  <header class="scene-header">
+    <span class="step-label">场景 08 · 动手</span>
+    <h2 class="scene-title">负样本怎么采？树怎么建？</h2>
+    <p class="scene-lead">两个工程细节，都有实测数字。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">实验一：噪声分布 P<sub>n</sub>(w) ∝ U(w)<sup>α</sup> —— α 取多少？</h3>
+    <p style="font-size:14px;color:var(--fg-2)">IMDB 50k 语料、词表 2000 上实测。切 α，看 8 个词被采为负样本的概率怎么变：</p>
+    <div style="display:flex;gap:8px;margin:10px 0;" id="alphaBtns"></div>
+    <div class="bars" id="negBars" style="height:170px;"></div>
+    <div class="kv">
+      <span class="pill">分布熵 <b id="negEntropy">—</b> nats</span>
+      <span class="pill">最高频词 the 占比 <b id="negTop">—</b></span>
+    </div>
+    <div class="callout">α=1（纯词频）：the 一家独大，模型只要学会"见到 the 就说不是邻居"就能拿分，学不到细粒度。α=0（均匀）：常见但无关的词又见不到。<b>α=0.75 是折中</b>——把词频开个 3/4 次方，压扁头部、抬起尾部。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">采样分布的数学形状</h3>
+    <div class="formula small">P<sub>n</sub>(w) = <span class="frac"><span class="num">U(w)<sup>α</sup></span><span class="den">Σ<sub>v∈V</sub> U(v)<sup>α</sup></span></div>
+    <p style="font-size:15px;line-height:1.9;">U(w) 是词频（unigram）分布。α 是一个<b>温度旋钮</b>：α=1 就是原词频；α→0 趋向均匀分布；0&lt;α&lt;1 把分布"压扁"——高频相对低频的优势被开根号式削弱。上表实测：α 从 1 调到 0.75，the 的采样概率从 6.88% 压到 2.72%，queen 从 0.008% 抬到 0.017%（2 倍）。<b>为什么正好 3/4：原论文的经验值，没有推导</b>——这是本课"未能验证清单"的一员。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">实验二：层次 softmax 为什么用哈夫曼树</h3>
+    <p style="font-size:14px;color:var(--fg-2)">同样 V=2000 真实词频建树，比较"平均每词的查询路径长度"（按词频加权）：</p>
+    <div class="bars" id="huffBars" style="height:170px;"></div>
+    <div class="kv">
+      <span class="pill">the（6.88%）：深度 <b>4</b>，编码 1011</span>
+      <span class="pill">morning（0.005%）：深度 <b>14</b></span>
+      <span class="pill">哈夫曼 vs 平衡树：省 <b>22.8%</b></span>
+    </div>
+    <div class="callout">哈夫曼树让高频词走短路——这就是它的全部意义。<b>树形只由词频决定，不含任何语义信息。</b>另外注意：内部节点的向量 v′<sub>n</sub> 属于节点（W−1 个），不属于任何词。</div>
+  </div>
+
+  <div class="formula" style="font-size:17px;">
+    J<sub>neg</sub> = −log σ( u<sub>o</sub>ᵀ v<sub>c</sub> ) − <span class="big">∑</span><sub>k∈采样</sub> log σ( −u<sub>k</sub>ᵀ v<sub>c</sub> ) ， σ(x) = 1 / (1+e<sup>−x</sup>)
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">负采样梯度：干净得不像话</h3>
+    <p style="font-size:15px;line-height:1.9;">sigmoid 有两个法宝性质：<b>σ(−x) = 1 − σ(x)</b> 和 <b>σ′(x) = σ(x)(1−σ(x))</b>。用它们对 J<sub>neg</sub> 求导（记 s<sub>w</sub> = u<sub>w</sub>ᵀv<sub>c</sub>）：</p>
+    <div class="formula small">∂J<sub>neg</sub>/∂v<sub>c</sub> = (σ(s<sub>o</sub>) − 1)·u<sub>o</sub> + <span class="big">∑</span><sub>k∈采样</sub> σ(s<sub>k</sub>)·u<sub>k</sub></div>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li>结构跟 naive 版一样优雅："(预测−目标)×方向"。σ(s<sub>o</sub>)−1 ≤ 0，把 v<sub>c</sub> 拉向真实邻居；σ(s<sub>k</sub>) ≥ 0，把 v<sub>c</sub> 推离负样本。</li>
+      <li><b>稀疏性一目了然</b>：只有 {o} ∪ {k 个负样本} 出现在公式里——每步只更新 (1+K)·d 个数，其余 V−K−1 行碰都不碰。这就是对场景 7 问题②的正面回答。</li>
+      <li>代价：输出不再是概率（softmax 的归一化被扔了）。要概率的任务请用层次 softmax。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">层次 softmax 的路径概率公式（严格版）</h3>
+    <div class="formula small">p(w | w<sub>I</sub>) = <span class="big">∏</span><sub>j=1..L(w)−1</sub> σ( ⟦n(w,j+1) = ch(n(w,j))⟧ · v′<sub>n(w,j)</sub>ᵀ v<sub>w<sub>I</sub></sub> )</div>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li>n(w, j) = 从根到叶子 w 路径上第 j 个节点；⟦·⟧ 是方向指示：下一步是左孩子取 +1，右孩子取 −1。每个内部节点做一道"往左还是往右"的二分类。</li>
+      <li><b>参数归属要记死</b>：v<sub>w</sub> 属于词（V 个）；v′<sub>n</sub> 属于<b>内部节点</b>（W−1 个，不属于任何词）。输出层总参数 (V + W − 1)·d ≈ 2Vd——<b>省的不是参数量，是每步计算量</b>。</li>
+      <li>可验证：对随机向量，Σ<sub>w</sub> p(w|w<sub>I</sub>) = 1 精确成立（本机实测误差 ~2×10⁻¹⁶）——它是合法概率分布，负采样不是。</li>
+      <li><b>哈夫曼最优性</b>：哈夫曼树在所有二叉树中最小化带权路径长 Σ<sub>w</sub> f(w)·L(w)。期望查询代价 ∝ 这个加权和，所以按词频建哈夫曼树 = 数学上最优的期望步数（实测 8.49 vs 平衡树 11，省 22.8%）。</li>
+    </ul>
+  </div>
+
+  <div class="checkpoint" data-check="cp6">
+    <div class="cp-head">◈ 检验点 6 · 别答错</div>
+    <div>"罕见词的表示质量差"这个问题，是靠什么解决的？</div>
+    <div class="quiz-opt" data-v="0">A. 负采样</div>
+    <div class="quiz-opt" data-v="1">B. 高频词子采样（按概率丢弃高频词）</div>
+    <div class="quiz-opt" data-v="2">C. 哈夫曼树</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 9 · 训练兑现 + 两条路
+============================================================ -->
+<section class="scene" data-scene="9">
+  <header class="scene-header">
+    <span class="step-label">场景 09 · 兑现</span>
+    <h2 class="scene-title">真训一遍，然后做那道著名的算术</h2>
+    <p class="scene-lead">纯 numpy 手写的 skip-gram + 负采样，7540 token 小语料，11 万次更新（本机实跑）：</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">loss 曲线（实测）</h3>
+    <svg id="lossChart" viewBox="0 0 640 220" style="width:100%;height:auto;background:var(--bg-2);border-radius:12px;"></svg>
+    <div class="kv">
+      <span class="pill">每次更新乘加次数：负采样 <b>192</b> vs 全量 softmax <b>2208</b>（V=69）</span>
+      <span class="pill">若 V=10 万：<b>3.2×10⁶</b> vs 192 → 差 1.7 万倍</span>
+    </div>
+    <p style="font-size:14px;color:var(--fg-2);margin-bottom:0;">读图基准：均匀乱猜的 loss = ln V = ln 69 ≈ <b>4.23</b>；训练后 1.65。负采样下 loss 没有 0 这个下界参照——它度量的是"把真实邻居和 5 个噪声词区分开"的难易，所以看<b>趋势</b>不看绝对值：前 2 万步陡降（高频模式先学到），后面缓降收敛。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">向量算术：king − man + woman = ?</h3>
+    <p style="font-size:14px;color:var(--fg-2)">训练完，用词向量做加减，再按余弦找最近的词（<b>剔除输入词本身</b>）：</p>
+    <div class="corpus-line" style="align-items:center;">
+      <span class="token center">king</span> <span style="font-size:20px;">−</span>
+      <span class="token">man</span> <span style="font-size:20px;">+</span>
+      <span class="token">woman</span> <span style="font-size:20px;">=</span>
+      <span class="token" style="border-color:var(--warn);color:var(--warn)">?</span>
+    </div>
+    <div class="bars" id="analogyBars" style="height:140px;"></div>
+    <div class="callout">结果前三名：queen / prince / princess。这就是"词的意思被编码成了方向"的直接证据。<b>已知缺陷</b>：如果信息在向量里但不是线性关系，类比就测不出来。</div>
+    <p style="font-size:15px;line-height:1.9;"><b>严格写法</b>：类比 a : a* :: b : ? 的求解是 w* = argmax<sub>w∉{a,a*,b}</sub> cos( x<sub>w</sub> , x<sub>b</sub> − x<sub>a</sub> + x<sub>a*</sub> )。三个细节：① 用余弦不用点积（场景 5 的理由）；② <b>必须剔除输入词</b>——否则余弦最近邻永远是输入自己，题目作废；③ 这个式子成立的前提是"性别"这类属性被编码成一个<b>固定方向</b>，使得所有 (a, a*) 对的位移向量近似平行。这是词向量空间结构里相当不平凡的经验事实，不是设计出来的。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">两条路对账</h3>
+    <table class="cmp">
+      <tr><th></th><th>计数派：共现矩阵 + SVD</th><th>预测派：word2vec</th></tr>
+      <tr><td>做什么</td><td>数邻居 → 压缩</td><td>设代理任务 → 梯度下降</td></tr>
+      <tr><td>优点</td><td>快、可解释、一次遍历</td><td>效果好、可扩展、A1 主线</td></tr>
+      <tr><td>缺点</td><td>稀疏敏感、大矩阵 SVD 贵</td><td>目标非凸、要调超参</td></tr>
+      <tr><td>合流</td><td colspan="2"><b>GloVe</b>（2014）：直接拟合"共现概率的比值"——用预测派的目标函数，吃计数派的全局统计。</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">GloVe 的出发点：比值比绝对值更有信息量</h3>
+    <p style="font-size:15px;line-height:1.9;">考察 P(k|ice) / P(k|steam)：k=solid 时比值<b>很大</b>（跟冰共现远多于蒸汽）；k=gas 时<b>很小</b>；k=water 时 ≈1（两者都常见）；k=fashion 时 ≈1（两者都无关）。<b>大/小/≈1 三档把"相关方向"和"无关噪声"分开了</b>，而单独的概率值做不到。GloVe 于是让向量直接拟合这个比值的对数：w<sub>i</sub>ᵀw̃<sub>j</sub> ≈ log X<sub>ij</sub> 的加权最小二乘。一句话：计数派的全局统计 + 预测派的训练目标。</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 10 · 评测与收官
+============================================================ -->
+<section class="scene" data-scene="10">
+  <header class="scene-header">
+    <span class="step-label">场景 10 · 收官</span>
+    <h2 class="scene-title">怎么知道学得好不好 + 期末检验</h2>
+    <p class="scene-lead">最后一组概念，然后验收。</p>
+  </header>
+
+  <div class="grid-2">
+    <div class="mini-card"><h4>内在评测</h4><p>在专门子任务上评：类比（king:queen）、WordSim353（向量距离 vs 人类打分的相关性，tiger–cat 得 7.35）。快，但<b>不确定对真实任务有用</b>。</p></div>
+    <div class="mini-card"><h4>外在评测</h4><p>在真实任务上评：命名实体识别（"Chris Manning lives in Palo Alto" → 人名/地名）。慢，但<b>换掉词向量后准确率提升 = 真的赢了</b>。</p></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">内在评测的数学：Spearman 等级相关</h3>
+    <p style="font-size:15px;line-height:1.9;">WordSim353 给 353 对词的人工相似度打分（tiger–cat 7.35，stock–jaguar 0.92）。把每对词的 cos 与人工分各自换成<b>名次</b>，算名次的 Pearson 相关——这就是 Spearman's ρ。用名次而不用原值，因为我们只要求"单调一致"：向量觉得更像的对，人也觉得更像，<b>数值尺度不需要对齐</b>。这正是"内在评测只看排序能力"的精确含义。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本章数学地图（合上页面前，每个式子都应该能默写）</h3>
+    <table class="cmp">
+      <tr><th>对象</th><th>式子</th><th>一句话</th></tr>
+      <tr><td>目标函数</td><td>J(θ) = −(1/T) Σ<sub>t</sub> Σ<sub>j≠0</sub> log P(w<sub>t+j</sub>|w<sub>t</sub>)</td><td>平均负对数似然</td></tr>
+      <tr><td>softmax</td><td>P(o|c) = exp(u<sub>o</sub>ᵀv<sub>c</sub>) / Σ<sub>w</sub> exp(u<sub>w</sub>ᵀv<sub>c</sub>)</td><td>点积→指数→归一化</td></tr>
+      <tr><td>naive 梯度</td><td>∂J/∂v<sub>c</sub> = Σ<sub>w</sub> P(w|c)u<sub>w</sub> − u<sub>o</sub></td><td>期望 − 现实</td></tr>
+      <tr><td>负采样</td><td>J<sub>neg</sub> = −log σ(u<sub>o</sub>ᵀv<sub>c</sub>) − Σ<sub>k</sub> log σ(−u<sub>k</sub>ᵀv<sub>c</sub>)</td><td>K+1 道二分类</td></tr>
+      <tr><td>噪声分布</td><td>P<sub>n</sub>(w) ∝ U(w)<sup>3/4</sup></td><td>压头抬尾</td></tr>
+      <tr><td>层次 softmax</td><td>p = ∏ σ(⟦方向⟧·v′<sub>n</sub>ᵀv<sub>w<sub>I</sub></sub>)</td><td>路径上一串二分类</td></tr>
+      <tr><td>SVD 截断</td><td>‖X−X<sub>k</sub>‖<sub>F</sub>² = Σ<sub>i&gt;k</sub> σ<sub>i</sub>²</td><td>误差有闭式</td></tr>
+      <tr><td>余弦</td><td>cos θ = u·v / (‖u‖‖v‖)</td><td>∈[−1,1]（Cauchy–Schwarz）</td></tr>
+    </table>
+  </div>
+
+  <div class="card" id="finalQuiz">
+    <h3 style="margin-top:0">期末检验 · 6 题</h3>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">合书自测 · 能讲清才算过</h3>
+    <p style="font-size:14px;color:var(--fg-2)">先合上页面口头回答，再点开对答案。讲不出来的进错题本。</p>
+    <ul class="self-test" id="selfTest"></ul>
+  </div>
+
+  <div class="card score-card">
+    <div style="font-size:14px;color:var(--fg-3);letter-spacing:.1em;text-transform:uppercase;">本章得分</div>
+    <div class="score-big" id="finalScore">0 / 14</div>
+    <p style="color:var(--fg-2);max-width:560px;margin:10px auto 20px;" id="finalMsg"></p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a class="btn btn-primary btn-large" href="index.html" style="text-decoration:none;">回到学习路径 →</a>
+      <button class="btn btn-large" id="resetBtn">重学本章</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本章没能验证的部分（诚实清单）</h3>
+    <ul style="font-size:14px;color:var(--fg-2);line-height:1.9;margin:0;padding-left:18px;">
+      <li>α=0.75 是原论文经验值，"为什么不是 0.7 或 0.8"没有推导。</li>
+      <li>玩具语料（3 句 / 7 词）只演示机制，不能外推真实语料的数值。</li>
+      <li>训练演示来自本仓库 playground 的 numpy 实现，非官方 word2vec C 代码输出。</li>
+      <li>WordSim353 分数抄自课程 slides，未下载数据集复核。</li>
+      <li>"只用一套向量也行、稍差一点"是 slides 原话，无实验数据。</li>
+      <li>GloVe 损失函数的公式在 slides 图片层，本页未展开。</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<!-- ================= 底部场景导航 ================= -->
+<div class="scene-footer">
+  <button class="btn" id="prevBtn">← 上一节</button>
+  <div class="dots" id="dots"></div>
+  <button class="btn btn-primary" id="nextBtn">下一节 →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<noscript><p style="padding:100px 20px;text-align:center;">本页需要 JavaScript（全部内容离线本地运行，不联网）。</p></noscript>
+
+<script>
+/* ==== 内联自 assets/k01.js ==== */
+/* ================================================================
+   K01 · 词向量与分布语义 — 全部交互逻辑
+   纯原生 JS，file:// 双击可跑，无依赖。
+   ================================================================ */
+(function () {
+'use strict';
+
+/* ---------------- 工具 ---------------- */
+function $(sel, root) { return (root || document).querySelector(sel); }
+function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function toast(msg) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function () { t.classList.remove('show'); }, 2200);
+}
+
+/* ---------------- 存档 ---------------- */
+var SAVE_KEY = 'cs224n_k01_v2';
+var save = { checks: {}, quiz: {}, tasks: {}, selftest: {}, scene: 0 };
+try {
+  var raw = localStorage.getItem(SAVE_KEY);
+  if (raw) save = JSON.parse(raw);
+} catch (e) {}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+
+var TOTAL = 14; // 6 检验点 + 6 期末题 + 1 向量任务 + 1 合书自测
+function score() {
+  var s = 0;
+  Object.keys(save.checks).forEach(function (k) { if (save.checks[k]) s++; });
+  Object.keys(save.quiz).forEach(function (k) { if (save.quiz[k] === true) s++; });
+  if (save.tasks._point) s++;
+  if (save.selftest._point) s++;
+  return s;
+}
+function refreshProgress() {
+  var s = score();
+  $('#progressFill').style.width = (s / TOTAL * 100) + '%';
+  $('#progressLabel').textContent = s + ' / ' + TOTAL;
+  var fs = $('#finalScore'); if (fs) fs.textContent = s + ' / ' + TOTAL;
+  var msg = $('#finalMsg');
+  if (msg) {
+    if (s >= 14) msg.textContent = '满分。去 A1 把共现矩阵和 SVD 亲手写出来吧——讲义里的每个数字你都已经见过活的版本。';
+    else if (s >= 10) msg.textContent = '主线已通。剩下的分数多在「合书自测」——能讲出来才算真的懂。';
+    else if (s >= 5) msg.textContent = '过半。建议回到没拿分的场景，把交互实验再做一遍。';
+    else msg.textContent = '按顺序走一遍 10 个场景，每个检验点先猜再验证。';
+  }
+}
+
+/* ---------------- 主题 ---------------- */
+var themeBtn = $('#themeBtn');
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  themeBtn.textContent = t === 'dark' ? '☾ 浅色' : '☀ 深色';
+}
+applyTheme(localStorage.getItem('k01_theme') || 'dark');
+themeBtn.addEventListener('click', function () {
+  var cur = document.documentElement.getAttribute('data-theme');
+  var nxt = cur === 'dark' ? 'light' : 'dark';
+  applyTheme(nxt);
+  localStorage.setItem('k01_theme', nxt);
+});
+
+/* ---------------- 场景路由 ---------------- */
+var scenes = $$('.scene');
+var N = scenes.length;
+var dotsBox = $('#dots');
+var SCENE_NAMES = ['封面', '旧世界', '分布假说', '共现矩阵', '降维', '相似度', 'word2vec', '代价', '负采样', '训练兑现', '评测收官'];
+for (var i = 0; i < N; i++) {
+  (function (i) {
+    var d = el('span', 'dot');
+    d.title = SCENE_NAMES[i] || ('场景 ' + i);
+    d.addEventListener('click', function () { go(i); });
+    dotsBox.appendChild(d);
+  })(i);
+}
+var inited = {};
+function go(i) {
+  i = Math.max(0, Math.min(N - 1, i));
+  scenes.forEach(function (s, j) { s.classList.toggle('active', j === i); });
+  $$('.dot', dotsBox).forEach(function (d, j) { d.classList.toggle('active', j === i); });
+  save.scene = i; persist();
+  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  if (!inited[i]) { inited[i] = true; (SCENE_INIT[i] || function () {})(); }
+  try { history.replaceState(null, '', '#' + i); } catch (e) {}
+}
+$('#prevBtn').addEventListener('click', function () { go(save.scene - 1); });
+$('#nextBtn').addEventListener('click', function () { go(save.scene + 1); });
+document.addEventListener('keydown', function (e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowRight') go(save.scene + 1);
+  if (e.key === 'ArrowLeft') go(save.scene - 1);
+});
+
+/* 封面：场景地图 + 开始 */
+(function () {
+  var map = $('#sceneMap');
+  for (var i = 1; i < N; i++) {
+    (function (i) {
+      var c = el('div', 'map-card');
+      c.innerHTML = '<div class="num">' + String(i).padStart(2, '0') + '</div><div class="ttl">' + SCENE_NAMES[i] + '</div>';
+      c.addEventListener('click', function () { go(i); });
+      map.appendChild(c);
+    })(i);
+  }
+  $('#startBtn').addEventListener('click', function () { go(1); });
+})();
+
+/* ---------------- 检验点通用逻辑 ---------------- */
+var CP_ANSWERS = { cp1: '0', cp2: '2', cp3: '1', cp4: '1', cp5: '0', cp6: '1' };
+var CP_EXPLAIN = {
+  cp1: '对。one-hot 里"像不像"这个概念不存在——这正是要发明词向量的原因。',
+  cp2: '对。"I like deep learning" 和 "I like NLP" 里 like 的左边都是 I，共 2 次。',
+  cp3: '对。多保留一根轴，丢的信息只会更少：误差 2.014 → 1.623。',
+  cp4: '对。这正是贵的根源——每个训练对都要扫整个词表。',
+  cp5: '对。B 说的是层次 softmax，别混。',
+  cp6: '对。高频词子采样让罕见词获得更多有效上下文；负采样治的是 softmax 的代价。'
+};
+$$('.checkpoint').forEach(function (cp) {
+  var id = cp.getAttribute('data-check');
+  var fb = $('.cp-feedback', cp);
+  var opts = $$('.quiz-opt', cp);
+  if (save.checks[id]) {
+    opts.forEach(function (o) { if (o.getAttribute('data-v') === CP_ANSWERS[id]) o.classList.add('correct'); });
+    fb.textContent = CP_EXPLAIN[id]; fb.classList.add('good');
+    return;
+  }
+  opts.forEach(function (o) {
+    o.addEventListener('click', function () {
+      if (save.checks[id]) return;
+      var v = o.getAttribute('data-v');
+      if (v === CP_ANSWERS[id]) {
+        save.checks[id] = true; persist();
+        o.classList.add('correct');
+        fb.textContent = CP_EXPLAIN[id]; fb.className = 'cp-feedback good';
+        refreshProgress();
+        toast('检验点通过 +1');
+      } else {
+        o.classList.add('wrong');
+        fb.textContent = '再想想——可以把上面的实验再做一遍。';
+        fb.className = 'cp-feedback bad';
+        setTimeout(function () { o.classList.remove('wrong'); }, 900);
+      }
+    });
+  });
+});
+
+/* ================================================================
+   各场景初始化（懒加载：进入场景才建）
+   ================================================================ */
+var SCENE_INIT = {};
+
+/* ---------- 场景 1：one-hot ---------- */
+SCENE_INIT[1] = function () {
+  var words = ['hotel', 'motel', 'banking', 'monetary', 'cat'];
+  var box = $('#ohWords');
+  var picked = [];
+  function vec(w) {
+    var v = words.map(function (x) { return x === w ? '1' : '0'; });
+    return '[' + v.join(' ') + ']';
+  }
+  function render() {
+    $$('.word-chip', box).forEach(function (c) {
+      c.classList.toggle('picked', picked.indexOf(c.textContent) >= 0);
+    });
+    $('#ohVecA').textContent = picked[0] ? vec(picked[0]) : '—';
+    $('#ohVecB').textContent = picked[1] ? vec(picked[1]) : '—';
+    if (picked.length === 2) {
+      var dot = picked[0] === picked[1] ? 1 : 0;
+      $('#ohDot').textContent = dot;
+      $('#ohNote').textContent = dot === 0
+        ? '不同的词 → 恒为 0（正交）。意思再近也没用。'
+        : '同一个词 → 1。只有"是/不是"，没有"有点像"。';
+    } else {
+      $('#ohDot').textContent = '?';
+      $('#ohNote').textContent = picked.length === 1 ? '再点一个词' : '点两个词试试（可以点同一个）';
+    }
+  }
+  words.forEach(function (w) {
+    var c = el('span', 'word-chip', w);
+    c.addEventListener('click', function () {
+      if (picked.length >= 2) picked = [];
+      picked.push(w);
+      render();
+    });
+    box.appendChild(c);
+  });
+  render();
+};
+
+/* ---------- 场景 2：语境浏览器 ---------- */
+SCENE_INIT[2] = function () {
+  var DATA = {
+    delicious: {
+      sents: [
+        ['The ', 'soup ', 'was ', '|delicious|', ' and ', 'everyone ', 'asked ', 'for ', 'the ', 'recipe.'],
+        ['What ', 'a ', '|delicious|', ' cake ', '— ', 'did ', 'you ', 'bake ', 'it ', 'yourself?'],
+        ['The ', 'restaurant ', 'is ', 'famous ', 'for ', 'its ', '|delicious|', ' pasta.']
+      ],
+      note: '邻居们：soup / cake / pasta、famous、everyone asked for the recipe —— 不用查字典，你也知道它是夸食物。'
+    },
+    awful: {
+      sents: [
+        ['The ', 'movie ', 'was ', '|awful|', ' — ', 'we ', 'left ', 'halfway.'],
+        ['What ', 'an ', '|awful|', ' day ', '— ', 'nothing ', 'went ', 'right.'],
+        ['The ', 'food ', 'looked ', 'good ', 'but ', 'tasted ', '|awful|', '.']
+      ],
+      note: '邻居们：left halfway、nothing went right —— 全是负面语境。词义 = 邻居的分布。'
+    }
+  };
+  var btnBox = $('#ctxBtns'), sentBox = $('#ctxSents');
+  function render(key) {
+    $$('.word-chip', btnBox).forEach(function (c) { c.classList.toggle('picked', c.textContent === key); });
+    sentBox.innerHTML = '';
+    DATA[key].sents.forEach(function (parts) {
+      var s = el('div', 'sent');
+      parts.forEach(function (p) {
+        if (p.indexOf('|') === 0) {
+          var t = el('span', 't', p.replace(/\|/g, ''));
+          s.appendChild(t);
+        } else {
+          s.appendChild(document.createTextNode(p));
+        }
+      });
+      sentBox.appendChild(s);
+    });
+    var n = el('div', 'callout'); n.style.marginTop = '10px'; n.textContent = DATA[key].note;
+    sentBox.appendChild(n);
+  }
+  Object.keys(DATA).forEach(function (k) {
+    var c = el('span', 'word-chip', k);
+    c.addEventListener('click', function () { render(k); });
+    btnBox.appendChild(c);
+  });
+  render('delicious');
+};
+
+/* ---------- 场景 3：共现矩阵 ---------- */
+SCENE_INIT[3] = function () {
+  var CORPUS = [['I', 'like', 'deep', 'learning'], ['I', 'like', 'NLP'], ['I', 'enjoy', 'flying']];
+  var VOCAB = ['I', 'NLP', 'deep', 'enjoy', 'flying', 'learning', 'like'];
+  var chipsBox = $('#corpusChips'), matBox = $('#coMatrix');
+  var m = 1;
+
+  // 语料 chips（带句子/位置标记，供高亮）
+  var chipEls = [];
+  CORPUS.forEach(function (sent, si) {
+    sent.forEach(function (w, wi) {
+      var c = el('span', 'token', w);
+      c.dataset.s = si; c.dataset.w = wi;
+      chipsBox.appendChild(c);
+      chipEls.push(c);
+    });
+    if (si < CORPUS.length - 1) {
+      var sep = el('span', 'token', '·');
+      sep.style.opacity = '.35'; sep.style.border = 'none'; sep.style.background = 'none';
+      chipsBox.appendChild(sep);
+    }
+  });
+
+  function compute() {
+    var X = {}, contrib = {};
+    VOCAB.forEach(function (a) { X[a] = {}; contrib[a] = {}; VOCAB.forEach(function (b) { X[a][b] = 0; contrib[a][b] = []; }); });
+    CORPUS.forEach(function (sent, si) {
+      sent.forEach(function (w, wi) {
+        for (var j = Math.max(0, wi - m); j <= Math.min(sent.length - 1, wi + m); j++) {
+          if (j === wi) continue;
+          X[w][sent[j]]++;
+          contrib[w][sent[j]].push('句' + (si + 1) + '：「' + sent.join(' ') + '」');
+        }
+      });
+    });
+    return { X: X, contrib: contrib };
+  }
+
+  var grid = {}; // grid[a][b] -> cell el
+  function buildGrid() {
+    matBox.innerHTML = '';
+    matBox.style.gridTemplateColumns = 'repeat(' + (VOCAB.length + 1) + ', minmax(38px,auto))';
+    matBox.appendChild(el('div', 'cell head', 'X'));
+    VOCAB.forEach(function (b) { matBox.appendChild(el('div', 'cell head', b)); });
+    grid = {};
+    VOCAB.forEach(function (a) {
+      matBox.appendChild(el('div', 'cell head', a));
+      grid[a] = {};
+      VOCAB.forEach(function (b) {
+        var c = el('div', 'cell', '0');
+        grid[a][b] = c;
+        matBox.appendChild(c);
+      });
+    });
+  }
+
+  function showAll() {
+    var r = compute(), nz = 0;
+    VOCAB.forEach(function (a) {
+      VOCAB.forEach(function (b) {
+        var v = r.X[a][b], c = grid[a][b];
+        c.textContent = v;
+        c.classList.toggle('on', v > 0);
+        c.title = v > 0 ? r.contrib[a][b].join('\n') : '从未共现';
+        if (v > 0) nz++;
+      });
+    });
+    $('#sparsityPill').textContent = nz + ' / 49（' + (nz / 49 * 100).toFixed(1) + '% 非零）';
+  }
+
+  function stepBuild() {
+    buildGrid();
+    var r = compute();
+    var steps = [];
+    CORPUS.forEach(function (sent, si) {
+      sent.forEach(function (w, wi) { steps.push({ si: si, wi: wi }); });
+    });
+    var cur = {};
+    VOCAB.forEach(function (a) { cur[a] = {}; VOCAB.forEach(function (b) { cur[a][b] = 0; }); });
+    var idx = 0, nz = 0;
+    $('#buildBtn').disabled = true;
+    var timer = setInterval(function () {
+      if (idx >= steps.length) {
+        clearInterval(timer);
+        chipEls.forEach(function (c) { c.classList.remove('center', 'context'); });
+        $('#buildBtn').disabled = false;
+        $('#sparsityPill').textContent = nz + ' / 49（' + (nz / 49 * 100).toFixed(1) + '% 非零）';
+        VOCAB.forEach(function (a) { VOCAB.forEach(function (b) { grid[a][b].title = r.contrib[a][b].length ? r.contrib[a][b].join('\n') : '从未共现'; }); });
+        return;
+      }
+      var st = steps[idx++];
+      var sent = CORPUS[st.si], w = sent[st.wi];
+      chipEls.forEach(function (c) {
+        var si = +c.dataset.s, wi = +c.dataset.w;
+        c.classList.toggle('center', si === st.si && wi === st.wi);
+        c.classList.toggle('context', si === st.si && wi !== st.wi && Math.abs(wi - st.wi) <= m);
+      });
+      for (var j = Math.max(0, st.wi - m); j <= Math.min(sent.length - 1, st.wi + m); j++) {
+        if (j === st.wi) continue;
+        var b = sent[j];
+        if (cur[w][b] === 0) nz++;
+        cur[w][b]++;
+        var cell = grid[w][b];
+        cell.textContent = cur[w][b];
+        cell.classList.add('on');
+        cell.style.transform = 'scale(1.25)';
+        setTimeout(function (cc) { cc.style.transform = ''; }, 220, cell);
+      }
+      $('#sparsityPill').textContent = nz + ' / 49（构建中…）';
+    }, 420);
+  }
+
+  $('#winSlider').addEventListener('input', function () {
+    m = +this.value; $('#winVal').textContent = m; showAll();
+  });
+  $('#buildBtn').addEventListener('click', stepBuild);
+  $('#resetMatrixBtn').addEventListener('click', function () { buildGrid(); $('#sparsityPill').textContent = '0 / 49'; });
+  buildGrid(); showAll();
+};
+
+/* ---------- 场景 4：SVD ---------- */
+SCENE_INIT[4] = function () {
+  var SV = [2.6404, 2.6404, 1.1931, 1.1931, 0.7775, 0.7775, 0.0];
+  var ERR = [3.320849, 2.013971, 1.622533, 1.099613, 0.777544, 0.0, 0.0];
+  var total2 = SV.reduce(function (s, x) { return s + x * x; }, 0);
+  var barsBox = $('#svdBars'), fills = [];
+  SV.forEach(function (sv, i) {
+    var col = el('div', 'bar-col');
+    var num = el('div', 'bar-num', sv.toFixed(2));
+    var track = el('div', 'bar-track'); track.style.height = '120px';
+    var fill = el('div', 'bar-fill');
+    fill.style.height = (sv / 2.6404 * 100) + '%';
+    track.appendChild(fill);
+    var lab = el('div', 'bar-label', 'σ' + (i + 1));
+    col.appendChild(num); col.appendChild(track); col.appendChild(lab);
+    barsBox.appendChild(col);
+    fills.push(fill);
+  });
+  function update(k) {
+    $('#kVal').textContent = k;
+    $('#svdErr').textContent = ERR[k - 1].toFixed(3);
+    var e = 0; for (var i = 0; i < k; i++) e += SV[i] * SV[i];
+    $('#svdEnergy').textContent = (e / total2 * 100).toFixed(1) + '%';
+    fills.forEach(function (f, i) {
+      f.style.opacity = i < k ? '1' : '.18';
+    });
+  }
+  $('#kSlider').addEventListener('input', function () { update(+this.value); });
+  update(2);
+};
+
+/* ---------- 场景 5：向量游乐场 ---------- */
+SCENE_INIT[5] = function () {
+  var box = $('#vecPlayground');
+  var W = 640, H = 280, R = 3;
+  box.innerHTML = '<svg id="vecSvg" viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;background:var(--bg-2);border-radius:12px;touch-action:none;cursor:crosshair;"></svg>';
+  var svg = $('#vecSvg', box);
+  var NS = 'http://www.w3.org/2000/svg';
+  function sx(x) { return W / 2 + x / R * (W / 2 - 20); }
+  function sy(y) { return H / 2 - y / R * (H / 2 - 20); }
+  function invX(px) { return (px - W / 2) / (W / 2 - 20) * R; }
+  function invY(py) { return -(py - H / 2) / (H / 2 - 20) * R; }
+
+  // 网格
+  for (var g = -3; g <= 3; g++) {
+    var l1 = document.createElementNS(NS, 'line');
+    l1.setAttribute('x1', sx(g)); l1.setAttribute('y1', 0); l1.setAttribute('x2', sx(g)); l1.setAttribute('y2', H);
+    l1.setAttribute('stroke', 'rgba(148,163,184,.12)');
+    svg.appendChild(l1);
+    var l2 = document.createElementNS(NS, 'line');
+    l2.setAttribute('x1', 0); l2.setAttribute('y1', sy(g)); l2.setAttribute('x2', W); l2.setAttribute('y2', sy(g));
+    l2.setAttribute('stroke', 'rgba(148,163,184,.12)');
+    svg.appendChild(l2);
+  }
+  function mkArrow(color) {
+    var line = document.createElementNS(NS, 'line');
+    line.setAttribute('stroke', color); line.setAttribute('stroke-width', '3'); line.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(line);
+    var dot = document.createElementNS(NS, 'circle');
+    dot.setAttribute('r', '9'); dot.setAttribute('fill', color); dot.style.cursor = 'grab';
+    svg.appendChild(dot);
+    var lab = document.createElementNS(NS, 'text');
+    lab.setAttribute('fill', color); lab.setAttribute('font-size', '13'); lab.setAttribute('font-weight', '700');
+    svg.appendChild(lab);
+    return { line: line, dot: dot, lab: lab };
+  }
+  var uA = mkArrow('#38bdf8'), vA = mkArrow('#818cf8');
+  var u = { x: 2, y: 1 }, v = { x: -1, y: 1.6 };
+  var activeTask = null;
+
+  function fmt(n, d) { return (Math.round(n * Math.pow(10, d)) / Math.pow(10, d)).toFixed(d); }
+
+  function update() {
+    [[uA, u, 'u'], [vA, v, 'v']].forEach(function (p) {
+      var a = p[0], pt = p[1], name = p[2];
+      a.line.setAttribute('x1', sx(0)); a.line.setAttribute('y1', sy(0));
+      a.line.setAttribute('x2', sx(pt.x)); a.line.setAttribute('y2', sy(pt.y));
+      a.dot.setAttribute('cx', sx(pt.x)); a.dot.setAttribute('cy', sy(pt.y));
+      a.lab.setAttribute('x', sx(pt.x) + 12); a.lab.setAttribute('y', sy(pt.y) - 8);
+      a.lab.textContent = name + ' (' + fmt(pt.x, 1) + ', ' + fmt(pt.y, 1) + ')';
+    });
+    var dot = u.x * v.x + u.y * v.y;
+    var nu = Math.hypot(u.x, u.y), nv = Math.hypot(v.x, v.y);
+    var cos = (nu * nv) > 1e-6 ? dot / (nu * nv) : 0;
+    var ang = Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI;
+    $('#vDot').textContent = fmt(dot, 2);
+    $('#vCos').textContent = fmt(cos, 2);
+    $('#vAngle').textContent = fmt(ang, 0) + '°';
+    if (activeTask !== null && Math.abs(cos - activeTask) < 0.03 && nu > .3 && nv > .3) {
+      var t = activeTask; activeTask = null;
+      save.tasks['t' + t] = true;
+      var done = ['t-1', 't0', 't1'].filter(function (k) { return save.tasks[k]; }).length;
+      if (done >= 2 && !save.tasks._point) { save.tasks._point = true; toast('任务完成 ≥2 个，+1 分'); }
+      persist(); refreshProgress();
+      toast('✓ 任务达成：cos = ' + fmt(cos, 2));
+    }
+  }
+
+  function drag(vec) {
+    return function (e) {
+      e.preventDefault();
+      function mv(ev) {
+        var r = svg.getBoundingClientRect();
+        var px = (ev.clientX - r.left) / r.width * W;
+        var py = (ev.clientY - r.top) / r.height * H;
+        vec.x = Math.max(-R, Math.min(R, invX(px)));
+        vec.y = Math.max(-R, Math.min(R, invY(py)));
+        update();
+      }
+      function up() {
+        document.removeEventListener('pointermove', mv);
+        document.removeEventListener('pointerup', up);
+      }
+      document.addEventListener('pointermove', mv);
+      document.addEventListener('pointerup', up);
+    };
+  }
+  uA.dot.addEventListener('pointerdown', drag(u));
+  vA.dot.addEventListener('pointerdown', drag(v));
+
+  $$('[data-task]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      activeTask = +b.getAttribute('data-task');
+      toast('任务已激活：把 cos 拖到 ' + activeTask + '.00');
+    });
+  });
+  $('#vecReset').addEventListener('click', function () {
+    u = { x: 2, y: 1 }; v = { x: -1, y: 1.6 }; activeTask = null; update();
+  });
+  update();
+};
+
+/* ---------- 场景 6：滑动窗口 + softmax ---------- */
+SCENE_INIT[6] = function () {
+  var SENT = ['the', 'quick', 'brown', 'fox', 'jumps', 'over', 'the', 'lazy', 'dog'];
+  var CAND = ['the', 'quick', 'brown', 'fox', 'jumps', 'over', 'lazy', 'dog'];
+  var m = 2, pos = 3, playing = false, timer = null;
+  var sentBox = $('#w2vSent'), barsBox = $('#softmaxBars');
+  var chips = SENT.map(function (w) {
+    var c = el('span', 'token', w);
+    sentBox.appendChild(c);
+    return c;
+  });
+  function score(word, p) {
+    // 示意分布：真实上下文给高分；其余给稳定的伪随机低分
+    var si = SENT.indexOf(word);
+    if (si >= 0 && si !== p && Math.abs(si - p) <= m) return 2.2;
+    if (word === SENT[p]) return -2.0;
+    var h = ((word.length * 31 + p * 17) % 10) / 10;
+    return h * 0.8 - 0.4;
+  }
+  function render() {
+    chips.forEach(function (c, i) {
+      c.classList.toggle('center', i === pos);
+      c.classList.toggle('context', i !== pos && Math.abs(i - pos) <= m);
+    });
+    var ctx = SENT.filter(function (_, i) { return i !== pos && Math.abs(i - pos) <= m; });
+    $('#w2vCap').innerHTML = '位置 t=' + (pos + 1) + '：中心词 = <b style="color:var(--accent)">' + SENT[pos] + '</b>，上下文 = {' + ctx.join(', ') + '}';
+    // softmax
+    var exps = CAND.map(function (w) { return Math.exp(score(w, pos)); });
+    var sum = exps.reduce(function (a, b) { return a + b; }, 0);
+    var rows = CAND.map(function (w, i) { return { w: w, p: exps[i] / sum }; });
+    rows.sort(function (a, b) { return b.p - a.p; });
+    barsBox.innerHTML = '';
+    rows.forEach(function (r) {
+      var col = el('div', 'bar-col');
+      var num = el('div', 'bar-num', (r.p * 100).toFixed(0) + '%');
+      var track = el('div', 'bar-track'); track.style.height = '100px';
+      var fill = el('div', 'bar-fill');
+      var isCtx = ctx.indexOf(r.w) >= 0;
+      fill.style.height = Math.max(2, r.p * 100) + '%';
+      if (!isCtx) { fill.style.background = 'var(--fg-3)'; fill.style.opacity = '.4'; }
+      track.appendChild(fill);
+      col.appendChild(num); col.appendChild(track); col.appendChild(el('div', 'bar-label', r.w));
+      barsBox.appendChild(col);
+    });
+  }
+  function step(d) { pos = (pos + d + SENT.length) % SENT.length; render(); }
+  $('#wPrev').addEventListener('click', function () { step(-1); });
+  $('#wNext').addEventListener('click', function () { step(1); });
+  $('#wPlay').addEventListener('click', function () {
+    playing = !playing;
+    this.textContent = playing ? '⏸ 暂停' : '▶ 自动播放';
+    if (playing) { timer = setInterval(function () { step(1); }, 900); }
+    else clearInterval(timer);
+  });
+  render();
+};
+
+/* ---------- 场景 7：代价对比 ---------- */
+SCENE_INIT[7] = function () {
+  var DATA = [
+    { name: 'naive softmax', v: 30000000, label: '3.0×10⁷', note: '每训练对' },
+    { name: '层次 softmax', v: 5100, label: '5.1×10³', note: 'O(log V·d)' },
+    { name: '负采样', v: 1800, label: '1.8×10³', note: 'O((1+K)·d)' }
+  ];
+  var box = $('#costBars');
+  var maxL = Math.log10(DATA[0].v), minL = Math.log10(DATA[2].v) - 0.5;
+  DATA.forEach(function (d) {
+    var col = el('div', 'bar-col');
+    var num = el('div', 'bar-num', d.label);
+    var track = el('div', 'bar-track'); track.style.height = '150px';
+    var fill = el('div', 'bar-fill');
+    fill.style.height = ((Math.log10(d.v) - minL) / (maxL - minL) * 100) + '%';
+    track.appendChild(fill);
+    col.appendChild(num); col.appendChild(track);
+    col.appendChild(el('div', 'bar-label', d.name));
+    col.appendChild(el('div', 'bar-label', d.note));
+    box.appendChild(col);
+  });
+};
+
+/* ---------- 场景 8：负采样 α + 哈夫曼 ---------- */
+SCENE_INIT[8] = function () {
+  var WORDS = ['the', 'and', 'a', 'of', 'to', 'man', 'king', 'queen'];
+  var TABLE = {
+    '0':    { p: [0.050, 0.050, 0.050, 0.050, 0.050, 0.050, 0.050, 0.050], H: 7.6009, top: '0.050%' },
+    '0.5':  { p: [0.840, 0.587, 0.585, 0.554, 0.532, 0.107, 0.040, 0.029], H: 7.3284, top: '0.840%' },
+    '0.75': { p: [2.715, 1.583, 1.577, 1.452, 1.368, 0.123, 0.028, 0.017], H: 6.7838, top: '2.715%' },
+    '1':    { p: [6.880, 3.352, 3.334, 2.985, 2.758, 0.111, 0.015, 0.008], H: 5.8683, top: '6.880%' }
+  };
+  var btnBox = $('#alphaBtns'), barsBox = $('#negBars');
+  function render(a) {
+    $$('.word-chip', btnBox).forEach(function (c) { c.classList.toggle('picked', c.textContent === 'α = ' + a); });
+    var d = TABLE[a];
+    barsBox.innerHTML = '';
+    WORDS.forEach(function (w, i) {
+      var col = el('div', 'bar-col');
+      var num = el('div', 'bar-num', d.p[i].toFixed(2) + '%');
+      var track = el('div', 'bar-track'); track.style.height = '110px';
+      var fill = el('div', 'bar-fill');
+      fill.style.height = Math.max(2, d.p[i] / 6.88 * 100) + '%';
+      if (a === '0.75') fill.style.background = 'linear-gradient(180deg, var(--ok), var(--accent))';
+      track.appendChild(fill);
+      col.appendChild(num); col.appendChild(track); col.appendChild(el('div', 'bar-label', w));
+      barsBox.appendChild(col);
+    });
+    $('#negEntropy').textContent = d.H.toFixed(2);
+    $('#negTop').textContent = d.top;
+  }
+  Object.keys(TABLE).forEach(function (a) {
+    var c = el('span', 'word-chip', 'α = ' + a);
+    c.addEventListener('click', function () { render(a); });
+    btnBox.appendChild(c);
+  });
+  render('0.75');
+
+  // 哈夫曼
+  var HF = [
+    { name: '哈夫曼树', v: 8.49, note: '按词频加权 · 最优' },
+    { name: '完全平衡树', v: 11.00, note: 'log₂2000 ≈ 11' },
+    { name: '随机合并树', v: 14.31, note: '20 次平均' }
+  ];
+  var hbox = $('#huffBars');
+  HF.forEach(function (d, i) {
+    var col = el('div', 'bar-col');
+    var num = el('div', 'bar-num', d.v.toFixed(2));
+    var track = el('div', 'bar-track'); track.style.height = '110px';
+    var fill = el('div', 'bar-fill');
+    fill.style.height = (d.v / 14.31 * 100) + '%';
+    if (i === 0) fill.style.background = 'linear-gradient(180deg, var(--ok), var(--accent))';
+    track.appendChild(fill);
+    col.appendChild(num); col.appendChild(track);
+    col.appendChild(el('div', 'bar-label', d.name));
+    col.appendChild(el('div', 'bar-label', d.note));
+    hbox.appendChild(col);
+  });
+};
+
+/* ---------- 场景 9：loss 曲线 + 类比 ---------- */
+SCENE_INIT[9] = function () {
+  var PTS = [
+    [11000, 3.2664], [22000, 2.3838], [33000, 2.0589], [44000, 1.8634], [55000, 1.7694],
+    [66000, 1.7189], [77000, 1.6940], [88000, 1.6840], [99000, 1.6630], [110000, 1.6539]
+  ];
+  var svg = $('#lossChart'), NS = 'http://www.w3.org/2000/svg';
+  var W = 640, H = 220, padL = 46, padB = 30, padT = 14, padR = 14;
+  var x0 = 11000, x1 = 110000, y0 = 1.5, y1 = 3.4;
+  function sx(x) { return padL + (x - x0) / (x1 - x0) * (W - padL - padR); }
+  function sy(y) { return padT + (y1 - y) / (y1 - y0) * (H - padT - padB); }
+  // 轴
+  var ax = document.createElementNS(NS, 'line');
+  ax.setAttribute('x1', padL); ax.setAttribute('y1', H - padB); ax.setAttribute('x2', W - padR); ax.setAttribute('y2', H - padB);
+  ax.setAttribute('stroke', 'rgba(148,163,184,.4)'); svg.appendChild(ax);
+  var ay = document.createElementNS(NS, 'line');
+  ay.setAttribute('x1', padL); ay.setAttribute('y1', padT); ay.setAttribute('x2', padL); ay.setAttribute('y2', H - padB);
+  ay.setAttribute('stroke', 'rgba(148,163,184,.4)'); svg.appendChild(ay);
+  [1.5, 2, 2.5, 3].forEach(function (y) {
+    var t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', padL - 8); t.setAttribute('y', sy(y) + 4); t.setAttribute('text-anchor', 'end');
+    t.setAttribute('fill', 'rgba(148,163,184,.7)'); t.setAttribute('font-size', '11');
+    t.textContent = y.toFixed(1); svg.appendChild(t);
+  });
+  [[11000, '11k'], [55000, '55k'], [110000, '110k']].forEach(function (p) {
+    var t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', sx(p[0])); t.setAttribute('y', H - padB + 18); t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('fill', 'rgba(148,163,184,.7)'); t.setAttribute('font-size', '11');
+    t.textContent = p[1]; svg.appendChild(t);
+  });
+  var yl = document.createElementNS(NS, 'text');
+  yl.setAttribute('x', 12); yl.setAttribute('y', 16); yl.setAttribute('fill', 'rgba(148,163,184,.8)');
+  yl.setAttribute('font-size', '11'); yl.textContent = 'avg loss'; svg.appendChild(yl);
+  var path = PTS.map(function (p, i) { return (i ? 'L' : 'M') + sx(p[0]) + ' ' + sy(p[1]); }).join(' ');
+  var pl = document.createElementNS(NS, 'path');
+  pl.setAttribute('d', path); pl.setAttribute('fill', 'none');
+  pl.setAttribute('stroke', '#38bdf8'); pl.setAttribute('stroke-width', '2.5'); pl.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(pl);
+  PTS.forEach(function (p) {
+    var c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', sx(p[0])); c.setAttribute('cy', sy(p[1])); c.setAttribute('r', '4');
+    c.setAttribute('fill', '#818cf8');
+    var tt = document.createElementNS(NS, 'title');
+    tt.textContent = 'step ' + p[0] + ' · loss ' + p[1];
+    c.appendChild(tt);
+    svg.appendChild(c);
+  });
+
+  // 类比
+  var AN = [['queen', 0.999], ['prince', 0.999], ['princess', 0.998]];
+  var box = $('#analogyBars');
+  AN.forEach(function (r, i) {
+    var col = el('div', 'bar-col');
+    var num = el('div', 'bar-num', r[1].toFixed(3));
+    var track = el('div', 'bar-track'); track.style.height = '90px';
+    var fill = el('div', 'bar-fill');
+    fill.style.height = (r[1] * 100 * 0.9) + '%';
+    if (i === 0) fill.style.background = 'linear-gradient(180deg, var(--warn), var(--accent))';
+    track.appendChild(fill);
+    col.appendChild(num); col.appendChild(track); col.appendChild(el('div', 'bar-label', r[0]));
+    box.appendChild(col);
+  });
+};
+
+/* ---------- 场景 10：期末题 + 合书自测 ---------- */
+SCENE_INIT[10] = function () {
+  var QUIZ = [
+    { q: 'one-hot 表示最致命的问题是什么？', opts: ['维度太高存不下', '任意两个不同词正交，算不出相似度', '不能表示新词'], a: 1 },
+    { q: '分布语义假说的一句话版本：', opts: ['词义由词典定义给出', '词义由它指向的事物给出', '词义由经常出现在它附近的词给出'], a: 2 },
+    { q: '窗口共现矩阵为什么是对称的？', opts: ['因为每个词轮流当中心词，窗口不分左右', '因为 SVD 保证了对称', '因为语料是对称的'], a: 0 },
+    { q: '负采样的梯度为什么是稀疏的？', opts: ['因为 sigmoid 会截断小梯度', '因为一个窗口只涉及真实邻居 + K 个负样本，只需更新这些行', '因为学习率很小'], a: 1 },
+    { q: '层次 softmax 省的是什么？', opts: ['参数量', '每个训练步的计算量（V 选 1 → 路径上约 log V 次二分类）', '词表大小'], a: 1 },
+    { q: '内在评测（如类比任务）的已知风险：', opts: ['计算太慢', '子任务表现好，不保证对真实任务有用', '需要标注数据'], a: 1 }
+  ];
+  var box = $('#finalQuiz');
+  QUIZ.forEach(function (item, qi) {
+    var wrap = el('div');
+    wrap.style.margin = '16px 0';
+    var qh = el('div', null, (qi + 1) + '. ' + item.q);
+    qh.style.fontWeight = '600'; qh.style.marginBottom = '6px';
+    wrap.appendChild(qh);
+    var fb = el('div', 'cp-feedback');
+    item.opts.forEach(function (opt, oi) {
+      var o = el('div', 'quiz-opt', String.fromCharCode(65 + oi) + '. ' + opt);
+      if (save.quiz['q' + qi] === true && oi === item.a) o.classList.add('correct');
+      o.addEventListener('click', function () {
+        if (save.quiz['q' + qi] !== undefined) return;
+        if (oi === item.a) {
+          save.quiz['q' + qi] = true;
+          o.classList.add('correct');
+          fb.textContent = '✓ 正确'; fb.className = 'cp-feedback good';
+          refreshProgress();
+        } else {
+          save.quiz['q' + qi] = false;
+          o.classList.add('wrong');
+          $$('.quiz-opt', wrap)[item.a].classList.add('correct');
+          fb.textContent = '✗ 已标出正确答案。回到对应场景再看一眼。'; fb.className = 'cp-feedback bad';
+        }
+        persist(); refreshProgress();
+      });
+      wrap.appendChild(o);
+    });
+    wrap.appendChild(fb);
+    box.appendChild(wrap);
+  });
+
+  var SELF = [
+    ['WordNet 路线的四个问题里，哪一个最致命？', '算不出相似度。词典结构里没有"tiger 和 cat 有多像"这个数字，而下游任务要的恰恰是这个数字。'],
+    ['为什么 one-hot"算不出相似度"？', '任意两个不同词的 one-hot 向量正交（内积恒为 0）。只有"是/不是"，没有"有点像"。'],
+    ['分布语义假说的内容？', '一个词的意思由经常出现在它附近的词给出（Firth 1957）。做法：固定窗口收集上下文，用上下文构建表示。'],
+    ['word2vec 的代理任务是什么？为什么叫"代理"？', '用中心词预测上下文词。预测准不准不是目的——为了预测而被迫学出的向量才是目的。'],
+    ['为什么每个词要两套向量 v 和 u？', '中心词和上下文词角色不同，分开两套优化更容易；最后可平均。只用一套也能跑，稍差一点。'],
+    ['softmax 分母制造了哪三类问题？', '① 前向慢（扫全词表）② 反向梯度稠密（所有 u_w 都要更新）③ 目标错配（强制概率竞争，但只要向量）。② 最致命。'],
+    ['U(w)^3/4 里的 3/4 是干什么的？', '压扁词频分布：让低频词被采为负样本的机会变大、高频词不至于一家独大。经验值，无推导。'],
+    ['"罕见词表示差"靠什么解决？', '高频词子采样（按概率丢弃高频词），不是负采样。负采样治的是 softmax 的计算代价。']
+  ];
+  var ul = $('#selfTest');
+  SELF.forEach(function (pair, i) {
+    var li = el('li');
+    var q = el('div', 'q');
+    q.appendChild(el('span', null, pair[0]));
+    q.appendChild(el('span', 'hint', '先合书口述，再点开'));
+    var a = el('div', 'a', pair[1]);
+    if (save.selftest['s' + i]) li.classList.add('open');
+    q.addEventListener('click', function () {
+      li.classList.toggle('open');
+      if (li.classList.contains('open')) {
+        save.selftest['s' + i] = true;
+        var opened = SELF.every(function (_, j) { return save.selftest['s' + j]; });
+        if (opened && !save.selftest._point) {
+          save.selftest._point = true;
+          toast('合书自测全部过完 +1 分');
+        }
+        persist(); refreshProgress();
+      }
+    });
+    li.appendChild(q); li.appendChild(a);
+    ul.appendChild(li);
+  });
+
+  $('#resetBtn').addEventListener('click', function () {
+    if (!confirm('清空本章所有进度，重新学一遍？')) return;
+    localStorage.removeItem(SAVE_KEY);
+    location.href = 'k01.html';
+  });
+};
+
+/* ---------------- 推导步进器（事件委托，任意场景通用） ---------------- */
+document.addEventListener('click', function (e) {
+  var next = e.target.closest('[data-step-next]');
+  var reset = e.target.closest('[data-step-reset]');
+  if (!next && !reset) return;
+  var box = (next || reset).closest('.stepper');
+  var steps = $$('.step', box);
+  if (next) {
+    var hidden = steps.filter(function (s) { return !s.classList.contains('show'); });
+    if (hidden.length === 0) { toast('推导完毕——合上书，自己默写一遍'); return; }
+    hidden[0].classList.add('show');
+    if (hidden.length === 1) toast('最后一步了');
+  } else {
+    steps.forEach(function (s, i) { s.classList.toggle('show', i === 0); });
+  }
+});
+
+/* ---------------- 启动 ---------------- */
+var startScene = 0;
+var h = location.hash.replace('#', '');
+if (h !== '' && !isNaN(+h)) startScene = +h;
+else if (save.scene) startScene = save.scene;
+refreshProgress();
+go(startScene);
+
+})();
+</script>
+</body>
+</html>

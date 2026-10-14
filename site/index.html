@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS224N 学习路径</title>
+<meta name="description" content="CS224N 沉浸式交互学习路径。双击打开，离线可用。">
+<link rel="stylesheet" href="assets/k01.css">
+<style>
+.hero{ text-align:center; padding: 120px 22px 60px;}
+.hero-num{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(72px, 14vw, 150px); line-height:.95; font-weight:900;
+  color: transparent; -webkit-text-stroke: 2px rgba(148,163,184,.35);
+  letter-spacing:-.03em; user-select:none;
+}
+.path{ max-width: 760px; margin: 40px auto 120px; padding: 0 22px; position:relative;}
+.path::before{
+  content:''; position:absolute; left: 39px; top:0; bottom:0; width:2px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2), var(--border));
+  opacity:.5;
+}
+.node{
+  position:relative; display:flex; gap:20px; align-items:flex-start;
+  padding: 18px 0 18px 0; margin-left: 20px;
+}
+.node .pin{
+  flex:0 0 40px; width:40px; height:40px; border-radius:50%;
+  background: var(--bg-2); border:2px solid var(--border);
+  display:grid; place-items:center; font-weight:800; font-size:13px; color:var(--fg-3);
+  position:relative; z-index:1; background-clip: padding-box;
+}
+.node.open .pin{
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color:#062c36; border-color:transparent;
+  box-shadow: 0 0 0 6px rgba(56,189,248,.15);
+}
+.node .body{ flex:1; padding-top:4px;}
+.node .body h3{ margin:0 0 4px; font-size:18px;}
+.node .body p{ margin:0; font-size:14px; color:var(--fg-2);}
+.node .meta{ font-size:12px; color:var(--fg-3); margin-top:6px;}
+.node a.card-link{ text-decoration:none; color:inherit; display:block; border-radius:12px; transition:.2s;}
+.node.open a.card-link:hover h3{ color: var(--accent);}
+.node.locked{ opacity:.45;}
+.badge-done{ color: var(--ok); font-weight:700; font-size:13px;}
+.progress-card{ max-width:760px; margin: 0 auto; padding: 0 22px 30px; text-align:center; color:var(--fg-3); font-size:14px;}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="brand" href="index.html">
+    <div class="brand-mark">N</div>
+    <div class="brand-text">CS224N 学习路径<small>沉浸式交互版 · 离线可用</small></div>
+  </a>
+  <div class="nav-right">
+    <button class="nav-btn" id="themeBtn">☾ 浅色</button>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="cover-badge">Stanford CS224N · 自学重构版</div>
+  <div class="hero-num">CS224N</div>
+  <h1 class="cover-title">用交互把 NLP 学进手里</h1>
+  <p class="cover-lead">每一章 = 一条 10 场景的沉浸课程流：问题 → 直觉 → 动手实验 → 机制 → 检验。<br>所有数字来自本机实跑，不联网，双击即学。</p>
+  <div class="cover-meta">当前进度 · K01–K03 与 A1 轮椅已上线</div>
+  <a class="btn btn-primary btn-large" href="k01.html" style="text-decoration:none;">进入 K01 →</a>
+</header>
+
+<div class="progress-card" id="progressCard"></div>
+
+<div class="path" id="path"></div>
+
+<script>
+(function () {
+  var CH = [
+    { id: 'K01', title: '词向量与分布语义', desc: 'one-hot 为什么死、分布假说、共现矩阵 + SVD、word2vec、负采样与哈夫曼。', url: 'k01.html', open: true, meta: '10 场景 · 11 个交互实验 · 对接 A1' },
+    { id: 'A1', title: '作业 A1 · 词向量实战', desc: '亲手写共现矩阵 + TruncatedSVD + GloVe 分析。', url: 'a1.html', open: true, meta: '轮椅页 · 10 场景 · 四函数提示阶梯' },
+    { id: 'K02', title: '神经网络与反向传播', desc: '计算图求导、两层 MLP 白纸手推（第一道闸门）。', url: 'k02.html', open: true, meta: '10 场景 · 闸门 1 推导 · 对接 A2/T2' },
+    { id: 'A2', title: '作业 A2 · 依存句法分析', desc: 'tensor 求导书面题 + transition-based parser。', locked: true },
+    { id: 'K03', title: '语言模型与 RNN', desc: 'n-gram → RNN → 梯度消失。', url: 'k03.html', open: true, meta: '10 场景 · 7 个交互实验 · 对接 T2 A4/A5' },
+    { id: 'K04', title: '注意力与 Transformer', desc: '不查资料默画结构并标张量形状（第二道闸门）。', locked: true },
+    { id: 'A3', title: '作业 A3 · 从零写 GPT', desc: '6 处 TODO，对 snapshot 全绿 + loss 真下降。', locked: true },
+    { id: 'K05', title: '预训练', desc: 'BERT / GPT 范式。', locked: true },
+    { id: 'K06', title: '后训练', desc: 'SFT → RLHF → DPO。', locked: true },
+    { id: 'K07', title: 'PEFT 与 LoRA', desc: '低秩适配。', locked: true },
+    { id: 'K08', title: 'RAG 与 Agent', desc: '检索增强与工具调用。', locked: true },
+    { id: 'K09', title: '评测', desc: '基准、LLM-as-judge。', locked: true },
+    { id: 'A4', title: '作业 A4 · 评测与 red team', desc: 'API 评测实战（有降级方案）。', locked: true },
+    { id: 'K10', title: '推理模型', desc: 'o1/R1 式长链推理。', locked: true },
+    { id: 'K11', title: '分词与多语言', desc: 'BPE 与跨语言迁移。', locked: true },
+    { id: 'K12', title: '影响与开放问题', desc: '前沿 6 主题（第三道闸门）。', locked: true }
+  ];
+  var path = document.getElementById('path');
+  CH.forEach(function (c, i) {
+    var node = document.createElement('div');
+    node.className = 'node ' + (c.open ? 'open' : 'locked');
+    var pin = '<div class="pin">' + c.id.replace(/[KA]/, '') + '</div>';
+    var inner = '<div class="body"><h3>' + c.id + ' · ' + c.title + '</h3><p>' + c.desc + '</p>' +
+      '<div class="meta">' + (c.open ? (c.meta || '') : '未解锁') + '</div></div>';
+    if (c.open) {
+      node.innerHTML = pin + '<a class="card-link" href="' + c.url + '">' + inner + '</a>';
+    } else {
+      node.innerHTML = pin + inner;
+    }
+    path.appendChild(node);
+  });
+
+  // 进度卡
+  try {
+    var s = JSON.parse(localStorage.getItem('cs224n_k01_v2') || '{}');
+    var n = 0;
+    Object.keys(s.checks || {}).forEach(function (k) { if (s.checks[k]) n++; });
+    Object.keys(s.quiz || {}).forEach(function (k) { if (s.quiz[k] === true) n++; });
+    if (s.tasks && s.tasks._point) n++;
+    if (s.selftest && s.selftest._point) n++;
+    if (n > 0) {
+      document.getElementById('progressCard').textContent = 'K01 进行中：已得 ' + n + ' / 14 分 —— 继续 → k01.html';
+    }
+  } catch (e) {}
+
+  // 主题
+  var btn = document.getElementById('themeBtn');
+  function apply(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    btn.textContent = t === 'dark' ? '☾ 浅色' : '☀ 深色';
+  }
+  apply(localStorage.getItem('k01_theme') || 'dark');
+  btn.addEventListener('click', function () {
+    var nxt = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    apply(nxt); localStorage.setItem('k01_theme', nxt);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+/* ============================================================
+ * base.css —— 设计 token、重置、排版
+ * 默认浅色（讲义里明确说过"那个白色的感觉不错，不要太暗"），深色手动切换。
+ * ------------------------------------------------------------
+ * 视觉体系（2026-10-06 重做）：
+ *   暖米底 + 墨绿主色 + 橙/紫点缀；正文 16.5px、行高 1.9；
+ *   大圆角（14/18px）配柔和扩散阴影；数字一律等宽对齐。
+ *   ⚠️ 只改 token 与表现层，**不动任何类名**：三套断言（共 407 条）直接依赖
+ *   .hl / .q / .opt / .viz / .glos-item 等选择器，改名会全线崩。
+ * ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  --bg: #f7f7f2;
+  --bg-elev: #ffffff;
+  --bg-inset: #f1f2ec;
+  --bg-code: #f4f5ef;
+
+  --fg: #17272b;
+  --fg-muted: #5a6b68;
+  --fg-faint: #8a9793;
+
+  --line: #dfe3da;
+  --line-strong: #c8cfc3;
+
+  --accent: #19766a;
+  --accent-soft: #eaf3ed;
+  --accent-fg: #12594f;
+
+  /* 浅色块底：学习目标卡、状态条、note 都用它 */
+  --wash: #eaf3ed;
+
+  --orange: #aa592a;
+  --orange-soft: #fdf1e6;
+  --purple: #775db1;
+  --purple-soft: #f1edfa;
+
+  --ok: #1a7f37;
+  --ok-soft: #e6f4ea;
+  --warn: #9a6700;
+  --warn-soft: #fff8e1;
+  --danger: #b42318;
+  --danger-soft: #fdecea;
+
+  /* 逐项高亮配色（手册里最受欢迎的功能） */
+  --hl-1: #ffe08a;
+  --hl-2: #b7e1cd;
+  --hl-3: #c5d8fb;
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --radius-lg: 18px;
+  --shadow: 0 1px 2px rgba(23, 39, 43, .04), 0 1px 3px rgba(23, 39, 43, .05);
+  --shadow-lg: 0 10px 30px rgba(23, 39, 43, .07);
+
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+          "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+          "Liberation Mono", monospace;
+
+  --sidebar-w: 268px;
+  --toc-w: 216px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #16201f;
+  --bg-elev: #1e2b29;
+  --bg-inset: #24322f;
+  --bg-code: #24322f;
+
+  --fg: #e4eee8;
+  --fg-muted: #a9bcb0;
+  --fg-faint: #7e9188;
+
+  --line: #33443e;
+  --line-strong: #46584f;
+
+  --accent: #7dd4b5;
+  --accent-soft: #23382f;
+  --accent-fg: #a3e3c9;
+
+  --wash: #23382f;
+
+  --orange: #efb487;
+  --orange-soft: #33261b;
+  --purple: #bba6ee;
+  --purple-soft: #2a2440;
+
+  --ok: #63c98a;
+  --ok-soft: #17281d;
+  --warn: #e2b93b;
+  --warn-soft: #2b2415;
+  --danger: #f2796c;
+  --danger-soft: #2e1a18;
+
+  --hl-1: #6b5613;
+  --hl-2: #1f4a37;
+  --hl-3: #23375c;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, .45);
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 16.5px;
+  line-height: 1.9;
+  letter-spacing: .01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 { line-height: 1.4; font-weight: 700; margin: 0 0 .5em; letter-spacing: -.01em; }
+h1 { font-size: 1.95rem; }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.16rem; }
+h4 { font-size: 1rem; }
+
+p { margin: 0 0 .95em; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: var(--mono);
+  font-size: .87em;
+  background: var(--wash);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: .1em .36em;
+  white-space: nowrap;
+}
+
+pre {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 0 0 1em;
+  line-height: 1.75;
+}
+pre code {
+  background: none; border: none; padding: 0;
+  white-space: pre; font-size: .85em; line-height: 1.7;
+}
+
+blockquote {
+  margin: 0 0 1em;
+  padding: .2em 0 .2em 1.1em;
+  border-left: 3px solid var(--accent);
+  color: var(--fg-muted);
+}
+
+hr { border: none; border-top: 1px solid var(--line); margin: 1.8em 0; }
+
+strong { font-weight: 700; }
+
+::selection { background: var(--hl-1); color: #17272b; }
+
+/* 键盘可达性：参考实现的做法是给一个高对比度橙色描边 */
+:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* 数字与表格用等宽字体对齐 */
+.num, td.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* 尊重系统的"减少动态效果" */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

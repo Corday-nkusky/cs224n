@@ -1,0 +1,397 @@
+/* ============================================================
+ * components.css —— 内容块、公式逐项高亮、先猜后对、Quiz、术语表
+ * ⚠️ 类名一律不变：site.check.js + smoke.mjs 共 407 条断言直接依赖
+ *    .hl / .hl-p1..p3 / .q / .opt / .predict / .glos-item / .card 等选择器。
+ * ============================================================ */
+
+/* ---------- 提示框 ---------- */
+.note {
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+  padding: 14px 17px;
+  margin: 0 0 1.2em;
+  background: var(--bg-elev);
+  line-height: 1.85;
+}
+.note > .nt { font-weight: 700; font-size: .9rem; margin-bottom: 6px; letter-spacing: -.005em; }
+.note p:last-child, .note > div:last-child { margin-bottom: 0; }
+.note.info { border-left-color: var(--accent); background: var(--accent-soft); }
+.note.info > .nt { color: var(--accent-fg); }
+.note.key { border-left-color: var(--ok); background: var(--ok-soft); }
+.note.key > .nt { color: var(--ok); }
+.note.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+.note.warn > .nt { color: var(--warn); }
+
+.quote {
+  border-left: 3px solid var(--accent);
+  padding: 6px 0 6px 16px;
+  margin: 0 0 1.2em;
+  font-style: italic;
+  color: var(--fg-muted);
+}
+.quote .by { display: block; font-style: normal; font-size: .78rem; color: var(--fg-faint); margin-top: 5px; }
+
+/* ---------- 表格 ---------- */
+.tbl-wrap { margin: 0 0 1.2em; min-width: 0; overflow-x: auto; }
+table.md {
+  border-collapse: separate; border-spacing: 0;
+  width: 100%; font-size: .89rem;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+table.md th, table.md td {
+  padding: 10px 14px; text-align: left; vertical-align: top;
+  line-height: 1.7; border-bottom: 1px solid var(--line);
+}
+table.md th { background: var(--wash); font-weight: 700; white-space: nowrap; }
+table.md tr:last-child td { border-bottom: none; }
+/* 圆角要在「分离边框」模式下自己补四角 */
+table.md th:first-child { border-top-left-radius: var(--radius-sm); }
+table.md th:last-child { border-top-right-radius: var(--radius-sm); }
+table.md tr:last-child td:first-child { border-bottom-left-radius: var(--radius-sm); }
+table.md tr:last-child td:last-child { border-bottom-right-radius: var(--radius-sm); }
+table.md tr:nth-child(even) td { background: color-mix(in srgb, var(--wash) 40%, transparent); }
+table.md tr:hover td { background: color-mix(in srgb, var(--wash) 80%, transparent); }
+table.md .md-note { font-size: .82rem; color: var(--fg-muted); margin: .5em 0 0; }
+.tbl-source { font-size: .74rem; color: var(--fg-faint); margin: 6px 0 0; }
+
+/* ---------- 公式 ---------- */
+.math-block {
+  margin: 1.3em 0; padding: 18px 20px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  min-width: 0; overflow-x: auto;
+}
+.math-block .katex-display { margin: 0; }
+.math-block .mtag { font-size: .76rem; color: var(--fg-faint); margin-top: 10px; }
+.katex { font-size: 1.03em; }
+[data-theme="dark"] .katex { color: var(--fg); }
+
+/* ---------- 公式逐项高亮 ---------- */
+.hl {
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--bg-elev); padding: 18px 20px; margin: 0 0 1.2em; min-width: 0;
+  box-shadow: var(--shadow);
+}
+.hl .hl-intro { font-size: .9rem; color: var(--fg-muted); margin-bottom: 12px; }
+.hl .hl-stage { overflow-x: auto; padding: 8px 0; min-width: 0; }
+.hl .hl-stage .katex-display { margin: 0; }
+.hl .katex .hl-p1, .hl .katex .hl-p2, .hl .katex .hl-p3 {
+  border-radius: 4px; padding: 1px 2px;
+  transition: background-color .18s ease, box-shadow .18s ease;
+}
+.hl[data-step="1"] .katex .hl-p1 { background: var(--hl-1); box-shadow: 0 0 0 2px var(--hl-1); }
+.hl[data-step="2"] .katex .hl-p2 { background: var(--hl-2); box-shadow: 0 0 0 2px var(--hl-2); }
+.hl[data-step="3"] .katex .hl-p3 { background: var(--hl-3); box-shadow: 0 0 0 2px var(--hl-3); }
+/* 分项讲的是「整体」（公式里没有对应片段）时，退化成整式高亮 —— 不留"点了没反应"的步骤 */
+.hl[data-lit="all"] .hl-stage .katex-display > .katex {
+  background: var(--hl-3); box-shadow: 0 0 0 2px var(--hl-3);
+  border-radius: 4px; padding: 1px 2px;
+  transition: background-color .18s ease, box-shadow .18s ease;
+}
+.hl .hl-bar { display: flex; align-items: center; gap: 9px; margin-top: 14px; flex-wrap: wrap; }
+.hl .hl-dots { display: flex; gap: 5px; }
+.hl .hl-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); }
+.hl .hl-dots i.on { background: var(--accent); }
+.hl .hl-note {
+  margin-top: 14px; padding: 12px 15px; font-size: .89rem; line-height: 1.8;
+  background: var(--wash); border-radius: var(--radius-sm); min-height: 3em;
+}
+.hl .hl-note .lb { font-weight: 700; display: block; margin-bottom: 4px; color: var(--accent-fg); }
+.hl .hl-parts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.hl .hl-parts button {
+  font: inherit; font-size: .78rem; cursor: pointer;
+  padding: 4px 11px; border-radius: 99px;
+  border: 1px solid var(--line-strong); background: var(--bg);
+  color: var(--fg-muted);
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.hl .hl-parts button:hover { border-color: var(--accent); color: var(--accent); }
+.hl .hl-parts button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ---------- 先猜后对 ---------- */
+.predict {
+  border: 1px solid var(--line); border-left: 4px solid var(--accent);
+  border-radius: var(--radius); background: var(--bg-elev);
+  box-shadow: var(--shadow);
+  padding: 16px 18px; margin: 0 0 1.2em; min-width: 0;
+}
+.predict .pq { font-size: .94rem; margin-bottom: 12px; line-height: 1.85; }
+.predict .pq .tag {
+  display: inline-block;
+  font-size: .7rem; font-weight: 700; color: var(--orange);
+  background: var(--orange-soft);
+  border-radius: 5px;
+  padding: 1px 7px; margin-right: 7px; vertical-align: 1px;
+}
+.predict .prow { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.predict input {
+  font: inherit; font-family: var(--mono); font-size: .92rem;
+  width: 132px; padding: 7px 10px;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--fg);
+}
+.predict input:focus { border-color: var(--accent); }
+.predict .unit { font-size: .83rem; color: var(--fg-muted); }
+.predict .verdict { margin-top: 12px; font-size: .89rem; line-height: 1.8; }
+.predict .verdict.ok { color: var(--ok); }
+.predict .verdict.no { color: var(--danger); }
+.predict .actual {
+  font-family: var(--mono); font-weight: 700;
+  background: var(--wash); border-radius: 5px; padding: 2px 7px;
+}
+.predict .palt { margin-top: 12px; font-size: .89rem; line-height: 1.8; color: var(--fg-muted); border-top: 1px dashed var(--line-strong); padding-top: 11px; }
+.predict .psrc { font-size: .73rem; color: var(--fg-faint); margin-top: 10px; }
+.predict .psrc code { font-size: .95em; }
+
+/* ---------- 术语表 ---------- */
+/* 2026-10-06 起每条是「多段讲解」而不是一句话：一段说清它解决什么问题，
+   一段给具体例子，最后才给术语名与出处。CSS 支持 .d 里放多段 / 列表 / 公式。 */
+.glos-item { padding: 22px 0; border-bottom: 1px solid var(--line); }
+.glos-item:last-child { border-bottom: none; }
+.glos-item .g {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  font-weight: 700; font-size: 1.06rem; letter-spacing: -.01em;
+}
+.glos-item .d {
+  font-size: .9rem; color: var(--fg-muted);
+  margin-top: 10px; line-height: 1.9;
+}
+.glos-item .d p { margin: 0 0 .8em; }
+.glos-item .d p:last-child { margin-bottom: 0; }
+.glos-item .d strong { color: var(--fg); font-weight: 700; }
+.glos-item .d ul, .glos-item .d ol { margin: .35em 0 .8em; padding-left: 1.4em; }
+.glos-item .d li { margin-bottom: .4em; }
+.glos-item .d code { font-size: .92em; }
+.glos-item .d .katex { font-size: 1em; }
+/* 例子用浅底块单独拎出来，扫读时能一眼抓住 */
+.glos-item .d .eg {
+  display: block;
+  background: var(--wash); border-radius: var(--radius-sm);
+  padding: 11px 14px; margin: .6em 0 .9em;
+  font-size: .88rem; line-height: 1.85; color: var(--fg-muted);
+}
+.glos-item .s {
+  display: block; margin-top: 12px;
+  font-size: .73rem; color: var(--fg-faint); font-family: var(--mono);
+}
+
+/* ---------- 术语链接（2026-10-07） ----------
+   正文里出现的术语名 → 点一下跳到术语表对应条目。
+   用主色（墨绿）+ 虚线：和正文同色系、不刺眼，但一眼能看出"这个词可以点"。
+   （试过 color:inherit 只留虚线 —— 实机截图里几乎看不见，等于没做。） */
+.tlink {
+  color: var(--accent); text-decoration: none;
+  border-bottom: 1px dashed var(--accent);
+  cursor: pointer;
+}
+.tlink:hover, .tlink:focus-visible {
+  color: var(--accent-fg); background: var(--wash);
+  border-bottom-style: solid; border-bottom-color: var(--accent-fg);
+}
+/* code 被整个包进链接时，别叠两层下划线 */
+.tlink > code, .tlink code { border-bottom: none; background: transparent; color: inherit; }
+
+/* 从术语链接跳进来时，目标条目闪一下，提示「你跳到的就是这一条」 */
+.glos-item.flash { animation: glosFlash 1.7s ease-out; border-radius: var(--radius-sm); }
+@keyframes glosFlash {
+  0%, 70% { background: var(--hl-1); box-shadow: inset 3px 0 0 var(--accent); }
+  100%    { background: transparent; box-shadow: inset 3px 0 0 transparent; }
+}
+
+.card {
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--bg-elev); padding: 20px 22px; margin: 0 0 20px;
+  box-shadow: var(--shadow);
+}
+.card > h3 { margin-top: 0; font-size: 1.08rem; }
+
+/* ---------- Quiz ---------- */
+.quiz { display: flex; flex-direction: column; gap: 15px; }
+.q {
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--bg-elev); padding: 17px 19px; min-width: 0;
+  box-shadow: var(--shadow);
+}
+.q .qhead { display: flex; gap: 9px; align-items: baseline; margin-bottom: 10px; }
+.q .qid {
+  font-family: var(--mono); font-size: .72rem; color: var(--fg-faint);
+  border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 7px; flex: none;
+}
+.q .qkind {
+  font-size: .7rem; font-weight: 700; color: var(--accent);
+  background: var(--wash); border-radius: 5px; padding: 1px 7px; flex: none;
+}
+.q .qt { font-size: .94rem; line-height: 1.85; }
+.q .opts { display: flex; flex-direction: column; gap: 7px; margin-top: 12px; }
+.q .opt {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: pointer; font-size: .9rem; line-height: 1.75; background: var(--bg-elev);
+  transition: border-color .14s ease, background .14s ease;
+}
+.q .opt:hover { border-color: var(--accent); background: var(--wash); }
+.q .opt .k { font-family: var(--mono); color: var(--fg-faint); flex: none; }
+.q .opt.sel { border-color: var(--accent); background: var(--accent-soft); }
+.q .opt.right { border-color: var(--ok); background: var(--ok-soft); }
+.q .opt.wrong { border-color: var(--danger); background: var(--danger-soft); }
+.q .qrow { display: flex; gap: 9px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.q .qrow input {
+  font: inherit; font-family: var(--mono); font-size: .92rem; width: 124px;
+  padding: 7px 10px; border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm); background: var(--bg); color: var(--fg);
+}
+.q .qrow input:focus { border-color: var(--accent); }
+.q .qrow textarea { font-size: .9rem; line-height: 1.8; }
+.q .verdict { font-size: .88rem; font-weight: 650; }
+.q .verdict.ok { color: var(--ok); }
+.q .verdict.no { color: var(--danger); }
+.q .explain {
+  margin-top: 13px; padding: 13px 16px; font-size: .89rem; line-height: 1.85;
+  background: var(--wash); border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+}
+.q .points { margin: 10px 0 0; padding-left: 1.3em; font-size: .89rem; line-height: 1.85; }
+.q .points li { margin-bottom: 6px; }
+.q .qsrc { font-size: .73rem; color: var(--fg-faint); margin-top: 10px; }
+.quiz-score {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  font-size: .86rem; color: var(--fg-muted);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 13px 17px; background: var(--bg-elev); margin-bottom: 4px;
+  box-shadow: var(--shadow);
+}
+.quiz-score b { color: var(--fg); font-size: 1.15rem; font-family: var(--mono); }
+
+/* ---------- 诚实清单 ---------- */
+.honesty { counter-reset: h; }
+.honesty li { margin-bottom: .7em; line-height: 1.85; }
+.honesty .badge {
+  display: inline-block; font-size: .7rem; font-weight: 700;
+  background: var(--warn-soft); color: var(--warn);
+  border-radius: 5px;
+  padding: 1px 7px; margin-right: 7px;
+}
+
+/* ---------- 首页：课程卡片（2026-10-07） ----------
+   入口 #/ 渲染 KB.courses 里登记的全部课程。未开工的显示为虚线灰卡。 */
+/* 首页分成「知识点」与「动手作业」两区，这是分区标题行。
+   以前首页只有一排卡片，两条轨道混在一起 —— 看不出 A1 跟 K01 是两种东西。 */
+.home-sec {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin: 30px 0 -6px; padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.home-sec:first-of-type { margin-top: 22px; }
+.home-sec h2 { margin: 0; font-size: 1.16rem; letter-spacing: -.01em; }
+.home-sec span { font-size: .8rem; color: var(--fg-faint); }
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+  gap: 14px; margin: 20px 0 8px;
+}
+.course-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 17px 14px;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.course-card:hover, .course-card:focus-visible {
+  transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-lg);
+}
+/* 未开工：不可点、不抬升，一眼和实际能进的课分开 */
+.course-card.planned {
+  cursor: default; background: var(--bg-inset);
+  border-style: dashed; color: var(--fg-muted); box-shadow: none;
+}
+.course-card.planned:hover,
+.course-card.planned:focus-visible {
+  transform: none; border-color: var(--line); box-shadow: none;
+}
+.cc-no {
+  font-family: var(--mono); font-size: .76rem; letter-spacing: .08em;
+  color: var(--accent-fg); margin-bottom: 6px;
+}
+.course-card.planned .cc-no { color: var(--fg-faint); }
+.course-card h3 { margin: 0 0 4px; font-size: 1.06rem; letter-spacing: -.01em; }
+.cc-tags {
+  font-size: .78rem; color: var(--fg-faint);
+  font-family: var(--mono); margin-bottom: 12px;
+}
+.cc-stats {
+  display: flex; flex-wrap: wrap; gap: 4px 11px;
+  font-size: .78rem; color: var(--fg-muted);
+}
+.cc-note { font-size: .85rem; color: var(--fg-faint); }
+
+/* 作业卡：跟知识点卡在版式上完全一致（都是"可以进去的一页"），
+   只用左侧一条竖条 + 编号偏色做区分。别做成一整套新视觉 —— 那会让人
+   以为它是另一种交互，其实点进去的操作方式一模一样。 */
+.course-card.task { border-left: 3px solid var(--accent); }
+.course-card.task .cc-no { color: var(--fg-muted); }
+.cc-bar { height: 5px; border-radius: 99px; background: var(--bg-inset); margin: 12px 0 7px; }
+.cc-bar > i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.cc-bar.planned { visibility: hidden; }
+.cc-done { font-size: .74rem; color: var(--fg-faint); font-family: var(--mono); }
+
+/* ============================================================
+ * 本段导读（.goal）/ 本课地图（.roadmap）
+ * ------------------------------------------------------------
+ * 2026-10 加。起因：用户原话"学习时不知道看哪个，效率很低"。
+ * 于是每段开头给一张三栏导读卡，第 1 段开头给一张 10 段索引。
+ * 类名是全新的，不碰任何既有选择器（407 条断言依赖的那批类名一个没动）。
+ *
+ * ⚠️ 列数是**自适应**的，不是写死 3 列：第 1 段没有"前置"（这一课从它开始），
+ *    只有「这一段回答 / 读完你应该能」两栏。若写死 repeat(3, 1fr)，空出的第 3 格
+ *    会露出容器底色（--line），看起来像一块坏掉的空板。用 auto-flow 让列数跟着
+ *    子元素数走 —— 以后哪一段想省掉某一栏也不会再出现这个洞。
+ * ============================================================ */
+.goal {
+  display: grid; gap: 1px;
+  grid-auto-flow: column; grid-auto-columns: 1fr;
+  background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+  margin: 4px 0 20px;
+}
+.goal .gcol { background: var(--bg-elev); padding: 12px 14px; }
+.goal .gcol.g-covers { background: var(--accent-soft); }
+.goal .gt {
+  font-size: .78rem; font-weight: 600; letter-spacing: .01em;
+  color: var(--fg-muted); margin-bottom: 7px;
+}
+.goal .g-covers .gt { color: var(--accent-fg); }
+.goal .g-after .gt { color: var(--ok); }
+.goal ul { margin: 0; padding-left: 1.05em; }
+.goal li { font-size: .875rem; line-height: 1.55; color: var(--fg); margin: 3px 0; }
+.goal li::marker { color: var(--fg-faint); }
+
+.roadmap {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--bg-elev); padding: 14px 16px; margin: 4px 0 20px;
+}
+.roadmap .rm-intro { margin: 0 0 11px; font-size: .9rem; color: var(--fg-muted); }
+.roadmap .rm-list { display: grid; gap: 2px; }
+.roadmap .rm-item {
+  display: grid; grid-template-columns: 112px 1fr; gap: 12px;
+  align-items: baseline; padding: 6px 8px; border-radius: var(--radius-sm);
+  color: inherit; text-decoration: none; transition: background .12s;
+}
+.roadmap .rm-item:hover { background: var(--accent-soft); }
+.roadmap .rm-t { font-weight: 600; font-size: .88rem; color: var(--accent-fg); }
+.roadmap .rm-d { font-size: .84rem; color: var(--fg-muted); }
+
+@media (max-width: 520px) {
+  .course-grid { grid-template-columns: 1fr; gap: 11px; }
+}
+@media (max-width: 720px) {
+  .goal { grid-auto-flow: row; grid-auto-columns: auto; }
+  .roadmap .rm-item { grid-template-columns: 1fr; gap: 1px; }
+}

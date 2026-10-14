@@ -23,6 +23,38 @@ $$\frac{\partial \log p(w_O\mid w_I)}{\partial v_{w_I}} = \underbrace{u_{w_O}}_{
 > **每一个训练样本都要把 V 个词的内积全算一遍。** V=100000、D=300 时是 3×10⁷ 次乘加 × 每个样本。
 > 这就是为什么 2013 年之前"神经网络词向量"只是论文里的玩具。
 
+## 1.1 ⭐ 分母带来的其实是三类问题（严格区分）
+
+"softmax 太慢"这句话揉了三件不同的事，**它们需要的技术不一样**：
+
+| 类别 | 具体是什么 | 严重性 | 谁能解决 |
+|------|-----------|--------|---------|
+| ① **前向算得慢** | 每对要算 V 个点积 + V 个 exp | 可忍，理论上能靠堆算力硬扛 | 层次 softmax / 负采样 |
+| ② **反向写得多** | 梯度对 V−1 个非目标词都非零，要读写整个 `W_out` | **真正致命** | 层次 softmax / 负采样 |
+| ③ **目标函数错配** | softmax 强制"概率竞争"，但我们要的是向量不是概率 | **最深** —— 决定要不要**换目标函数** | **只有负采样** |
+
+**② 是最致命的。** 看上面那条梯度：第二项 $\sum_{w=1}^{V}p(w|w_I)u_w$ 要先**读**全部 V 行；而
+$\partial\mathcal{L}/\partial u_{w\neq o}=p(w|w_I)\cdot v_{w_I}$ 对 **V−1 个非目标词全部非零**，
+所以每训一个词对都要把 `W_out` 的**全部 V 行写回一遍** —— 梯度被分母从"稀疏"强行变成"稠密"。
+
+【论文原文 arXiv:1310.4546 §1】word2vec 的卖点恰恰是这句话：
+
+> *"Unlike most of the previously used neural network architectures for learning word vectors,
+> training of the Skip-gram model does not involve dense matrix multiplications."*
+
+**"no dense matrix multiplications" 就是它快的原因**，而 softmax 的分母正好把它变回了稠密矩阵运算。
+分布式训练时每步要同步整个 V×D 的更新矩阵 —— 这才是真的跑不动，加机器解决不了。
+
+**③ 为什么最深**：softmax 是**排他归一化**，抬高 $p(o|w_I)$ 必然压低其余 V−1 个词。
+但语义上这个偏置是错的 —— `cat` 的邻居 `dog` 和 `kitten` 并不互斥。更根本的是**我们要的根本不是概率**：
+【论文原文 §2.2】*"the Skip-gram model is only concerned with learning high-quality vector
+representations, so we are free to simplify NCE as long as the vector representations retain their quality."*
+这句话是负采样的合法性来源：**既然只要向量，归一化就是纯负担。**
+
+> ⚠️ **别把"罕见词学不好"算到 softmax 头上。** 那是**数据频率**问题。
+> 解决它的是**第三个技术 —— 高频词子采样**（§5.1），论文引言说它 *"improves accuracy of the
+> representations of less frequent words"*。子采样和负采样、层次 softmax 是**并列的三件事**。
+
 ---
 
 ## 2. Negative Sampling：把 1 道 V 选 1 的多选题，拆成 K+1 道判断题
@@ -300,26 +332,105 @@ syn0[a * layer1_size + b] = (((next_random & 0xFFFF) / (real)65536) - 0.5) / lay
 
 ---
 
-## 6. Hierarchical Softmax（另一条路，简述）
+## 6. Hierarchical Softmax（另一条路）
 
-用一棵 **Huffman 树**（按词频建，高频词路径短）把"V 选 1"变成路径上的 $\log_2 V$ 次左右判断：
+> slides 只提了名字没展开，本节内容取自 **arXiv:1310.4546 §2.1 原文 + 本机实测**。
+> 实测脚本 `06_讲义精讲/K01_词向量与分布语义/code/k01_huffman_neg.py`，输出在同级 `logs/` 下。
 
-$$p(w \mid w_I) = \prod_{j=1}^{L(w)-1} \sigma\Big([\![n(w,j+1)=\text{ch}(n(w,j))]\!]\cdot {v'_{n(w,j)}}^{\top} v_{w_I}\Big)$$
+### 6.1 思路与树的来源
 
-- 每个非叶节点有一个向量 $v'$；走左/右由 $\sigma$ 决定，标签是 ±1。
-- 代价 $O(\log_2 V \cdot D)$：V=1e5 时约 17 次判断，比 NEG 的 K+1=6 次多，但**不需要采样**。
-- 【论文原文】NEG *"results in faster training and better vector representations for frequent words,
-  compared to more complex hierarchical softmax"*，而 HS 对**低频词**更友好。
+【论文原文】在神经语言模型里由 **Morin and Bengio** 引入。核心是**不去评估 W 个输出节点，
+而是只评估约 $\log_2(W)$ 个节点**：把输出层表示成一棵二叉树，W 个词是叶子，每个内部节点显式表示
+"走左孩子还是右孩子"的相对概率 —— 这就定义了一次随机游走，给每个词分配了概率。
+
+**为什么是哈夫曼树**：树的结构严重影响性能（论文引 Mnih and Hinton 的对比研究）。word2vec 选二叉哈夫曼树，
+理由是【论文原文】*"we use a binary Huffman tree, as it assigns short codes to the frequent words
+which results in fast training."* 即**代价正比于路径长度，让高频词路径短则平均代价小** ——
+这是选它而非平衡树的唯一理由。
+
+**怎么建**（贪心，Huffman 1952）：每次把权重（=词频）最小的两个节点合并成父节点，重复 W−1 次。
+这个贪心使**带权路径长度** $\sum_w f(w)\cdot L(w)$ 全局最优。
+
+> ⚠️ **树形只由词频决定，不含任何句法或语义信息。** 有些教程讲得像"哈夫曼树学到了词之间的语义层次"，那是错的。
+
+### 6.2 路径概率公式
+
+【论文原文，公式 (3)】记 $n(w,j)$ 为根到 $w$ 路径上第 $j$ 个节点，$L(w)$ 为路径长
+（$n(w,1)=\text{root}$，$n(w,L(w))=w$），$\mathrm{ch}(n)$ 是 $n$ 的某个固定孩子，
+$[\![x]\!]$ 为真取 1、假取 −1：
+
+$$p(w \mid w_I) = \prod_{j=1}^{L(w)-1} \sigma\Big([\![n(w,j+1)=\mathrm{ch}(n(w,j))]\!]\cdot {v'_{n(w,j)}}^{\top} v_{w_I}\Big)$$
+
+**整条路径就是一个连乘，每一步都是一道二分类**：走"固定孩子"那侧用 $\sigma(s)$，
+另一侧用 $\sigma(-s)=1-\sigma(s)$。这也解释了为什么它仍是合法概率分布 ——
+每层是一次伯努利抽样，沿路径连乘天然归一化。论文说 *"It can be verified that $\sum_{w=1}^{W}p(w|w_I)=1$"*。
+
+**梯度**：每一层都是一个独立的二分类，残差 $(\sigma(\pm s)-y)$ 乘上"对面的那个向量"，
+沿路径累加即可。和 §2.3 的 NEG 梯度是同一个形状。
+
+### 6.3 ⚠️ 参数挂在哪（最容易搞混的一点）
+
+【论文原文】*"the hierarchical softmax formulation has one representation $v_w$ for each word $w$
+and one representation $v'_n$ for every inner node $n$ of the binary tree."*
+
+| 记号 | 属于谁 | 个数 |
+|------|-------|------|
+| $v_w$ | **词**的输入向量 | W 个 |
+| $v'_n$ | **内部节点**的向量（**不是任何词的向量**） | W−1 个 |
+
+输出层总参数量 $(2W-1)\cdot D$，和朴素 softmax 的 $2VD$ 基本相同 ——
+**省下来的是每步计算量，不是参数量。**
+
+### 6.4【实测】IMDB 真实语料上的数字
+
+跑 `k01_huffman_neg.py`（IMDB unsupervised 50k，V=2000，T=9,846,798）：
+
+| 量 | 实测值 |
+|---|-------|
+| `the` 的路径 / 深度 | `1011` / **4** |
+| 尾部低频词深度 | **14** |
+| 加权平均路径长 | **8.49**（平衡树 11.0，省 22.8%） |
+| 随机合并树（对照） | 14.31 = 哈夫曼的 **1.685 倍** |
+| 内部节点数 | 1999 = W−1，与理论一致 |
+| $\sum_w p(w\mid w_I)$ 数值误差 | **2.220e-16**（浮点极限） |
+
+论文口径核对：*"proportional to $L(w_O)$, which on average is no greater than $\log W$"*
+—— 实测 8.49 ≤ log₂2000 = 10.97，**成立**。
+
+### 6.5 与 NEG 的取舍
+
+| | 层次 softmax | 负采样 |
+|---|---|---|
+| 单步代价 | $O(L(w)\cdot D)$，随词频变化 | 固定 $(1+K)\cdot D$ |
+| 是否需要采样 | 不需要（确定性） | 需要（按 $P_n(w)$） |
+| **输出是否是合法概率** | ✅ **是** | ❌ **不是，只是分数** |
+| 对罕见词 | 路径长、代价高 | 代价固定 |
+
+【论文原文】NEG *"results in faster training and better vector representations for frequent words,
+compared to more complex hierarchical softmax"* —— 因为真实语料里绝大多数 token 是高频词，
+HS 的"高频便宜"优势在平均值上被稀释了。
+
+> ⚠️ **"HS 对低频词更友好"是我从上面这句论文结论反推的说法，论文没有直接这么说**，标【推断】。
+
+**工程实际**：`word2vec.c` 默认 `hs = 0, negative = 5`（见 §5.5），即**默认走 NEG**；
+gensim 只实现了 negative sampling，没有 HS。
 
 ---
 
 ## 7. 复杂度总账
 
-| | 每步计算量 | V=1e5, D=300, K=5 时 |
-|---|---|---|
-| 完整 softmax | $(C+1)\cdot V\cdot D$ | ~1.8e8 |
-| Hierarchical Softmax | $O(\log_2 V \cdot D)$ | ~5.1e3 |
-| **Negative Sampling** | $(1+K)\cdot D$ | **1.8e3** |
+| | 每步计算量 | **每步写回行数** | V=1e5, D=300, K=5 时 |
+|---|---|---|---|
+| 完整 softmax | $(C+1)\cdot V\cdot D$ | **V 行（全表）** | ~1.8e8 |
+| Hierarchical Softmax | $O(L(w)\cdot D)$ | 路径上 $\approx\log_2 V$ 行 | ~5.1e3 |
+| **Negative Sampling** | $(1+K)\cdot D$ | **1 + K 行** | **1.8e3** |
+| 高频词子采样 | —（减少样本数） | — | 论文称 **2–10×** 加速 |
+
+**"每步写回行数"这一列才是关键**：完整 softmax 的梯度对 V−1 个非目标词都非零，
+所以每步要读写整个 `W_out`。这一条比"算得慢"更致命 —— 它让分布式训练每步要同步整个 V×D 矩阵。
+
+**参数量三种方法基本相同**：朴素 softmax $2VD$，HS $(2W-1)D$，NEG $2VD$。
+**省的是每步计算量，不是存储。**
 
 > NEG 相对完整 softmax 约 **1e5 倍**加速。这就是"单机一天训千亿词"的算术来源
 > （【论文原文】引言：*"an optimized single-machine implementation can train on more than 100 billion words in one day"*）。
@@ -369,6 +480,12 @@ $$\text{PMI}(w, c) - \log k$$
 - ✅ 所有标【实测】的数字（范数增长、naive vs stable log-sigmoid、全零 vs 随机初始化、学习率扫描）
 
 **未核实 / 存疑（别当定论）：**
+- ❌ §1.1 里"softmax 的互斥性是错的归纳偏置"是我的分析，**论文没这么说**。论文只说"我们要的是向量，所以可以随便简化"
+- ❌ §6.5 里"HS 对低频词更友好"是我从论文结论反推的，**论文没有直接这么说**
+- ❌ **没有实测过"同样算力下三种方法训出的向量谁更好"**，只测了单步计算量、写入行数、概率合法性。论文说 NEG 对高频词更好，那是论文的实验结论，未独立复现
+- ❌ **子采样 2×–10× 是论文数字，未在本机复现**
+- ❌ 哈夫曼树的贪心最优性**严格证明未做**，只验证了"在构造的对照树里最优"
+- ❌ §6.4 的词表只取 top 2000，**不能外推到真实 10 万–100 万词表**（真实词表低频词比例更高，加权平均路径会更长）
 - ❌ §8 整个小节的 GloVe 与 Levy&Goldberg 论证与数字 —— 记忆引用，未核对
 - ❌ gensim 的 `min_alpha` 语义（绝对值）与源码（相对值）的差异 —— gensim 4.4.0 已装（2026-10-02），但该 API 行为**未实跑验证**
 - ❌ §5.6 末尾"全零 ≈ warmup"的解释 —— 我的推测，无出处

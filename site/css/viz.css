@@ -1,0 +1,238 @@
+/* ============================================================
+ * viz.css —— 交互实验面板
+ * 形态照参考实现（COMP90054 RL 学习包）的「实验卡」：
+ *   眉标 + 大标题 + 说明 → 控件行 → 大数字结果卡 → 图表 → 步骤按钮组 → 状态条
+ * ⚠️ 类名一律不变：smoke.mjs 的 A/B 组按 .viz / .ctl / .mx / .bars / .tree-svg
+ *    逐个点控件，改名会全线崩。
+ * ============================================================ */
+
+/* 交互面板**故意比正文宽**。
+   正文那 780px 是为「读」定的：一行四十来个字最省眼睛。但矩阵、条形、哈夫曼树
+   是拿来「看」的 —— 被同一条 780px 限制卡着，只能缩在左上角一小块，旁边全是空白。
+   这里让它向两侧出血，出血量 = 中间栏还剩多少空位（上限 400px）：
+     · 宽屏 → 铺开到一千多像素，矩阵和条形终于有横向空间；
+     · 中等屏 → 中间栏没有富余，但至少把正文的左右 padding（34px×2）吃回来；
+     · 极窄屏（≤860，侧栏变抽屉、正文 padding 收到 17px）→ 归零，绝不压出边界。
+   下限取 34px 而不是 0：`.content` 的 padding 是给「读」留的边距，
+   交互卡片没必要跟着留 —— 吃掉它，1280 这种主流宽度下也能宽出 68px。
+   再减 64px 是给两侧的呼吸 + 竖直滚动条留的余量（100vw 是含滚动条的）。 */
+.viz {
+  border: 1px solid var(--line); border-radius: var(--radius-lg);
+  background: var(--bg-elev); margin: 0 0 1.4em; overflow: hidden;
+  box-shadow: var(--shadow);
+  min-width: 0;
+  --viz-bleed: clamp(34px, calc((100vw - var(--sidebar-w) - var(--toc-w) - 780px - 64px) / 2), 400px);
+  width: calc(100% + 2 * var(--viz-bleed));
+  margin-left: calc(-1 * var(--viz-bleed));
+}
+/* ≤860px：三栏变一栏、侧栏成了抽屉，中间栏真的一寸余量都没有了 */
+@media (max-width: 860px) {
+  .viz { --viz-bleed: 0px; }
+}
+.viz-head {
+  padding: 17px 21px;
+  background: var(--wash);
+  border-bottom: 1px solid var(--line);
+}
+/* 眉标（大写 + 宽字距），新元素；旧数据没有也不影响 */
+.viz-head .ve, .viz-eyebrow {
+  display: block;
+  font-size: .68rem; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 8px;
+}
+.viz-head .vt { font-weight: 700; font-size: 1.05rem; letter-spacing: -.012em; line-height: 1.5; }
+.viz-head .vh { font-size: .86rem; color: var(--fg-muted); margin-top: 6px; line-height: 1.8; }
+.viz-body { padding: 18px 21px; min-width: 0; }
+
+.viz-ctl { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.ctl { display: flex; align-items: center; gap: 11px; flex-wrap: wrap; font-size: .85rem; }
+.ctl > label { color: var(--fg-muted); flex: none; min-width: 5.5em; }
+.ctl input[type="range"] { flex: 1; min-width: 130px; accent-color: var(--accent); }
+.ctl .val {
+  font-family: var(--mono); font-size: .85rem; min-width: 3.8em; text-align: right;
+  color: var(--accent-fg); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.ctl select, .ctl input[type="text"], .ctl input[type="number"] {
+  font: inherit; font-size: .85rem; padding: 6px 10px;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--bg); color: var(--fg);
+}
+.ctl select:focus, .ctl input:focus { border-color: var(--accent); }
+.ctl .chk { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--fg-muted); cursor: pointer; }
+
+.viz-out { font-size: .86rem; min-width: 0; line-height: 1.8; }
+.viz-out h5 {
+  font-size: .7rem; color: var(--fg-faint); text-transform: uppercase;
+  letter-spacing: .1em; margin: 18px 0 9px; font-weight: 700;
+}
+.viz-out h5:first-child { margin-top: 0; }
+
+/* ---------- 大数字结果卡（照参考实现的 .stats/.stat） ---------- */
+.stat-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 12px; margin: 16px 0;
+}
+.stat {
+  padding: 14px 16px;
+  background: var(--bg-inset);
+  border-radius: var(--radius-sm);
+}
+.stat .sl { display: block; font-size: .73rem; color: var(--fg-faint); margin-bottom: 8px; line-height: 1.5; }
+.stat .sv {
+  font-family: var(--mono); font-size: 1.45rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.stat .sv.ok { color: var(--accent); }
+.stat .sv.hi { color: var(--purple); }
+.stat .sv.warn { color: var(--orange); }
+.stat .sv .u { font-size: .78rem; font-weight: 500; color: var(--fg-faint); margin-left: 3px; }
+
+/* ---------- 步骤按钮组 + 状态回显条 ---------- */
+.step-bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin: 16px 0 0; }
+.viz-status {
+  border-left: 3px solid var(--accent);
+  background: var(--wash);
+  border-radius: var(--radius-sm);
+  padding: 13px 16px; margin-top: 15px;
+  font-size: .87rem; line-height: 1.85; min-height: 48px;
+}
+.viz-status b { color: var(--accent-fg); }
+.viz-status .mono { font-family: var(--mono); }
+
+/* 矩阵 */
+.mx { border-collapse: separate; border-spacing: 0; font-family: var(--mono); font-size: .77rem; }
+.mx th, .mx td {
+  border: 1px solid var(--line); padding: 3px 7px; text-align: center;
+  min-width: 2.2em; line-height: 1.6;
+}
+.mx th { background: var(--wash); font-weight: 700; color: var(--fg-muted); }
+.mx td.z { color: var(--line-strong); }
+.mx td.n { color: var(--fg); font-weight: 700; }
+.mx td.hot { background: var(--hl-1); }
+.mx-wrap { overflow-x: auto; min-width: 0; padding-bottom: 4px; }
+[data-theme="dark"] .mx td.z { color: #4a5058; }
+/* 「你的实现和答案差在这一格」—— danger-soft 打底 + danger 描边，
+   这样浅色主题（深红字/浅红底）和深色主题（浅红字/深红底）都读得清。 */
+.mx td.bad { background: var(--danger-soft); color: var(--danger); font-weight: 700; box-shadow: inset 0 0 0 2px var(--danger); }
+
+/* ---- A1 作业页的预演交互：语料 chip 与分段按钮 ---- */
+.sent-box { display: flex; flex-direction: column; gap: 7px; margin-bottom: 15px; }
+.sent-box .sent { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; font-size: .82rem; }
+.sent-box .sn { font-family: var(--mono); font-size: .74rem; color: var(--fg-faint); margin-right: 5px; flex: none; }
+.sent-box .chip {
+  font-family: var(--mono); padding: 2px 7px; border-radius: 5px;
+  background: var(--bg-inset); color: var(--fg-muted);
+  border: 1px solid transparent; cursor: pointer; transition: .15s;
+}
+.sent-box .chip:hover { border-color: var(--accent); color: var(--accent-fg); }
+.sent-box .chip.cur { background: var(--accent); color: #fff; }
+.sent-box .chip.ctx { background: var(--hl-1); color: var(--ink, var(--fg)); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg .btn { font-size: .78rem; padding: 4px 10px; }
+.seg .btn.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-fg); font-weight: 700; }
+
+/* 键值输出 */
+.kvs { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: .85rem; }
+.kvs .kv { display: flex; gap: 7px; align-items: baseline; }
+.kvs .kv .k { color: var(--fg-muted); }
+.kvs .kv .v { font-family: var(--mono); font-weight: 700; }
+.kvs .kv .v.ok { color: var(--accent); }
+.kvs .kv .v.warn { color: var(--orange); }
+.kvs .kv .v.bad { color: var(--danger); }
+
+/* 条形图 */
+.bars { display: flex; flex-direction: column; gap: 6px; }
+.bar-row { display: grid; grid-template-columns: 4.8em 1fr 5.4em; gap: 10px; align-items: center; font-size: .8rem; }
+.bar-row .bl { font-family: var(--mono); color: var(--fg-muted); text-align: right; }
+.bar-row .bt { background: var(--bg-inset); border-radius: 5px; height: 17px; overflow: hidden; min-width: 0; }
+/* ⚠️ display: block 是必须的：填充条是 <i>（inline 元素），而 inline 元素的
+   width / height 一律无效 —— 少这一行，52 条填充条全部渲染成 0×0 的空盒子，
+   页面上只剩左标签和右数字、中间一片空白，而且**任何断言都不会红**
+   （元素确实存在、class 也对、宽度值也写进了 style 属性）。
+   .bt 是 grid item 而不是 flex 容器，所以不会有 flex 的自动 blockify 兜底。 */
+.bar-row .bf { display: block; height: 100%; background: var(--accent); border-radius: 5px; transition: width .25s ease; }
+.bar-row .bf.alt { background: var(--purple); }
+.bar-row .bf.warn { background: var(--orange); }
+.bar-row .bv { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 16px; font-size: .78rem; color: var(--fg-muted); margin: 10px 0 0; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; }
+
+/* 向量显示 */
+.vec { font-family: var(--mono); font-size: .81rem; white-space: pre; overflow-x: auto; line-height: 1.9; }
+.vec .hi { background: var(--hl-1); border-radius: 3px; padding: 1px 2px; }
+
+/* 哈夫曼树 */
+.tree-svg { width: 100%; height: auto; min-width: 0; overflow-x: auto; display: block; }
+.tree-svg text { font-family: var(--mono); font-size: 9px; fill: var(--fg); }
+.tree-svg .edge { stroke: var(--line-strong); stroke-width: 1; fill: none; }
+.tree-svg .edge.hot { stroke: var(--accent); stroke-width: 2.4; }
+.tree-svg .node circle { fill: var(--bg-elev); stroke: var(--line-strong); }
+.tree-svg .node.hot circle { fill: var(--accent-soft); stroke: var(--accent); }
+.tree-svg .bit { fill: var(--fg-faint); font-size: 8px; }
+
+.path-bits { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; font-family: var(--mono); }
+.path-bits span {
+  display: inline-block; min-width: 1.6em; text-align: center;
+  padding: 2px 5px; border: 1px solid var(--line-strong);
+  border-radius: 5px; font-size: .83rem;
+}
+.path-bits span.hot { background: var(--hl-1); border-color: var(--accent); font-weight: 700; }
+
+/* 数值梯度对比 */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-width: 0; }
+.cmp .box {
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 14px; min-width: 0; background: var(--bg-inset);
+}
+.cmp .box .bt { font-size: .78rem; color: var(--fg-muted); margin-bottom: 7px; }
+.cmp .mono { font-size: .79rem; }
+
+.viz-src { font-size: .74rem; color: var(--fg-faint); margin-top: 15px; padding-top: 11px; border-top: 1px dashed var(--line-strong); }
+.viz-src code { font-size: .95em; }
+.err { color: var(--danger); font-size: .86rem; }
+
+/* ---------- 词块（滑动窗口演示：中心词涂实色 / 邻居描边 / 扫过的淡化） ---------- */
+.wd-line { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0; align-items: center; }
+.wd {
+  padding: 5px 11px; border-radius: 8px;
+  background: var(--bg-inset); border: 1px solid transparent;
+  font-family: var(--mono); font-size: .84rem; line-height: 1.5;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.wd.center { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+.wd.ctx { background: var(--wash); border-color: var(--accent); color: var(--accent-fg); }
+.wd.done { opacity: .42; }
+
+/* ---------- 抽到的负样本词片 ---------- */
+.chip-row { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0; align-items: center; }
+.chip {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 5px 12px; border-radius: 99px;
+  background: var(--wash); border: 1px solid var(--line);
+  font-size: .82rem;
+}
+.chip.hit { background: var(--orange-soft); border-color: var(--orange); }
+.chip code { font-size: .95em; background: none; border: none; padding: 0; }
+.chip .cfreq { font-family: var(--mono); font-size: .74rem; color: var(--fg-faint); }
+
+/* ---------- 通用 SVG 画布（余弦角度盘等） ---------- */
+.vz-svg { width: 100%; height: auto; display: block; margin: 14px 0; overflow: visible; }
+.vz-svg .ax { stroke: var(--line-strong); stroke-width: 1; }
+.vz-svg .u { stroke: var(--accent); stroke-width: 2.6; }
+.vz-svg .v { stroke: var(--purple); stroke-width: 2.6; }
+.vz-svg .uhead { fill: var(--accent); }
+.vz-svg .vhead { fill: var(--purple); }
+.vz-svg .arc { stroke: var(--orange); stroke-width: 2; fill: none; }
+.vz-svg .axl { fill: var(--fg-faint); font-size: 10px; font-family: var(--mono); }
+.vz-svg .lbl { fill: var(--fg); font-size: 12px; font-family: var(--mono); font-weight: 700; }
+
+/* 交互里的小字说明（原先只有 .toc .mini，这里是全局兜底） */
+.mini { font-size: .85rem; color: var(--fg-muted); line-height: 1.8; }
+
+@media (max-width: 700px) {
+  .cmp { grid-template-columns: 1fr; }
+  .stat-row { grid-template-columns: 1fr 1fr; }
+  .viz-body { padding: 15px 16px; }
+  .viz-head { padding: 14px 16px; }
+}

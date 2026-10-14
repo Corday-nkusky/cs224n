@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K03 · 语言模型与 RNN — CS224N 学习路径</title>
+<meta name="description" content="CS224N 第 3 章：语言模型与 RNN。沉浸式交互课程，全部数据实跑验证，离线可用。">
+<link rel="stylesheet" href="assets/k01.css">
+<style>
+/* ---------- 本页专用（沿用 K01/K02 设计系统） ---------- */
+.hero-num{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(120px, 22vw, 220px); line-height: .9; font-weight: 900;
+  color: transparent; -webkit-text-stroke: 2px rgba(148,163,184,.35);
+  letter-spacing:-.04em; user-select:none; margin: 10px 0 0;
+}
+.quote{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(19px, 2.8vw, 26px); font-style: italic; line-height:1.5;
+  border-left: 3px solid var(--accent); padding: 6px 0 6px 20px; margin: 18px 0;
+  color: var(--fg);
+}
+.quote .who{ display:block; font-style: normal; font-size:13px; color:var(--fg-3); margin-top:8px; font-family: inherit;}
+
+.formula{
+  font-family: Georgia, "Times New Roman", serif; font-size: 19px;
+  display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap;
+  padding: 16px 12px; background: var(--bg-2); border:1px solid var(--border); border-radius:12px; margin: 14px 0;
+}
+.frac{ display:inline-flex; flex-direction:column; text-align:center; vertical-align:middle;}
+.frac .num{ border-bottom: 1.5px solid currentColor; padding: 0 7px;}
+.frac .den{ padding: 0 7px;}
+.formula sub, .formula sup{ font-size: 12px;}
+.formula .big{ font-size: 26px; line-height:1;}
+
+.kv{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0;}
+.kv .pill{ background:var(--bg-2); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:13px;}
+.kv .pill b{ color: var(--accent);}
+
+.vec{ font-family: Consolas, "Cascadia Code", monospace; font-size:14px; letter-spacing:1px; color: var(--fg-2); background:var(--bg-2); border-radius:8px; padding:8px 12px; display:inline-block;}
+.mono{ font-family: Consolas, "Cascadia Code", monospace; font-variant-numeric:tabular-nums;}
+
+.stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0;}
+.stat{ flex:1; min-width:150px; background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px;}
+.stat .v{ font-size:24px; font-weight:800; color: var(--accent); font-variant-numeric:tabular-nums;}
+.stat .k{ font-size:12px; color:var(--fg-3); margin-top:2px;}
+
+.checkpoint{ border:1px dashed rgba(56,189,248,.4); border-radius: var(--radius); padding:18px 20px; margin:22px 0; background: rgba(56,189,248,.05);}
+.checkpoint .cp-head{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; letter-spacing:.06em; color:var(--accent); text-transform:uppercase; margin-bottom:8px;}
+.cp-feedback{ margin-top:10px; font-size:14px; font-weight:600; min-height:20px;}
+.cp-feedback.good{ color: var(--ok);}
+.cp-feedback.bad{ color: var(--err);}
+
+.mini-card{ background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:16px;}
+.mini-card h4{ margin:0 0 8px; font-size:15px;}
+.mini-card p{ margin:0; font-size:14px; color:var(--fg-2);}
+
+table.cmp{ width:100%; border-collapse:collapse; font-size:14px; margin:12px 0;}
+table.cmp th, table.cmp td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+table.cmp th{ color:var(--fg-3); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+
+.self-test{ list-style:none; padding:0; margin:0;}
+.self-test li{ border:1px solid var(--border); border-radius:12px; margin:10px 0; overflow:hidden;}
+.self-test .q{ padding:14px 16px; cursor:pointer; font-weight:600; display:flex; justify-content:space-between; align-items:center; background:var(--bg-2);}
+.self-test .q:hover{ border-color:var(--accent);}
+.self-test .q .hint{ font-size:12px; color:var(--fg-3); font-weight:500; flex-shrink:0; margin-left:10px;}
+.self-test .a{ display:none; padding:14px 16px; color:var(--fg-2); font-size:14px; border-top:1px solid var(--border); line-height:1.8;}
+.self-test li.open .a{ display:block; animation: fadeUp .3s ease both;}
+
+.score-card{ text-align:center; padding:30px;}
+.score-big{ font-size:64px; font-weight:900; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+
+.toast{
+  position:fixed; left:50%; bottom:86px; transform:translateX(-50%) translateY(20px);
+  background:var(--bg-1); border:1px solid var(--accent); color:var(--fg); border-radius:12px;
+  padding:10px 18px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.3s; z-index:99;
+  box-shadow: var(--shadow);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0);}
+
+svg text{ font-family: inherit;}
+
+/* RNN 展开图 */
+.rnn-cell rect{ transition:.2s;}
+.rnn-cell.lit rect{ stroke: var(--accent); stroke-width:2.5;}
+.rnn-cap{ font-family:Consolas,monospace; font-size:12px; fill:var(--fg-2);}
+.shp{ color:var(--fg-3); font-size:12px; font-family:Consolas,monospace; }
+
+/* 填空 */
+.blank{
+  display:inline-block; min-width:150px; text-align:center;
+  border-bottom:3px solid var(--warn); font-weight:800; color:var(--warn);
+  font-size:1.1em; padding:0 8px;
+}
+.word-chip{
+  background:var(--bg-2); border:1px solid var(--border); border-radius:8px;
+  padding:5px 10px; font-size:14px; font-weight:600; cursor:pointer; transition:.2s;
+  margin:4px 6px 4px 0; display:inline-block;
+}
+.word-chip:hover{ border-color: var(--accent);}
+.word-chip.picked{ background: rgba(56,189,248,.18); border-color: var(--accent); color: var(--accent);}
+
+@media (max-width: 720px){
+  .scene{ padding: 76px 16px 110px;}
+  .progress-track{ width:70px;}
+  .brand-text small{ display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= 顶部导航 ================= -->
+<nav class="top-nav">
+  <a class="brand" href="index.html">
+    <div class="brand-mark">N</div>
+    <div class="brand-text">CS224N 学习路径<small>K03 · 语言模型与 RNN</small></div>
+  </a>
+  <div class="nav-right">
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0 / 14</div>
+    </div>
+    <button class="nav-btn" id="themeBtn">☾ 浅色</button>
+    <a class="nav-btn" href="index.html" style="text-decoration:none;">⌂ 路径</a>
+  </div>
+</nav>
+
+<div class="scene-container" id="scenes">
+
+<!-- ============================================================
+     场景 0 · 封面
+============================================================ -->
+<section class="scene scene-cover" data-scene="0">
+  <div class="cover-badge">CS224N · 第 3 章</div>
+  <div class="hero-num">K03</div>
+  <h1 class="cover-title">语言模型与 RNN</h1>
+  <p class="cover-lead">K01/K02 的词向量一词一义、与上下文无关。<br>现在要做<b>预测下一个词</b>——表示必须随语境流动。<br><b>"这是全课最重要的概念。"</b>（slides 原话）</p>
+  <div class="cover-meta">10 个场景 · 7 个交互实验 · 对接 T2 验收 A4/A5（梯度消失/爆炸）</div>
+  <button class="btn btn-primary btn-large" id="startBtn">开始 →</button>
+  <div class="scene-map" id="sceneMap"></div>
+</section>
+
+<!-- ============================================================
+     场景 1 · 语言模型是什么
+============================================================ -->
+<section class="scene" data-scene="1">
+  <header class="scene-header">
+    <span class="step-label">场景 01 · 问题</span>
+    <h2 class="scene-title">语言模型 = 给"下一个词"算概率</h2>
+    <p class="scene-lead">任务一句话：给定已出现的词，算词表里每个词当下一个词的概率。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">先看任务长什么样</h3>
+    <p style="font-size:20px;line-height:2;">the students opened their <span class="blank" id="blankWord">？</span></p>
+    <p style="font-size:14px;color:var(--fg-2)">点候选词，直观感受"概率分布"——一个合格的模型应该给 books/exams 高分，给 pizza 接近 0：</p>
+    <div style="margin:10px 0;">
+      <span class="word-chip" data-bw="books">books</span>
+      <span class="word-chip" data-bw="exams">exams</span>
+      <span class="word-chip" data-bw="laptops">laptops</span>
+      <span class="word-chip" data-bw="pizza">pizza</span>
+    </div>
+    <div class="callout">注意候选是<b>整个词表</b>——不是四选一。V=10 万时，模型每一步都要给出 10 万个非负、和为 1 的数。这个"每步对全词表打分"的要求是后面一切计算代价（softmax 分母、负采样）的根源，K01 已经见过一次。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">两个等价视角（都能默写才算懂）</h3>
+    <p style="font-size:15px;line-height:1.9;"><b>视角一：预测下一词</b>——每步产出条件分布 P(w<sub>t+1</sub> | w<sub>1</sub>,…,w<sub>t</sub>)。<b>视角二：给整段文本打分</b>——用链式法则把联合概率拆成条件概率连乘：</p>
+    <div class="formula">P(w₁,…,w<sub>T</sub>) = <span class="big">∏</span><sub>t=1..T</sub> P(w<sub>t</sub> | w₁,…,w<sub>t−1</sub>)</div>
+    <p style="font-size:15px;line-height:1.9;">这条链式分解是<b>恒等式</b>（概率乘法公式的反复套用），不含任何近似——近似在"怎么算每个条件概率"里（下一场景的 Markov 假设才是近似）。 slides 原话：足够强的下一词预测器<b>顺带会做很多事</b>——事实问答、句法、指代、情感，甚至一点推理；"Everything else in NLP has been rebuilt upon Language Modeling: <b>ChatGPT is an LM!</b>"</p>
+    <div class="callout"><b>亲手感受连乘</b>：下面 4 个滑块是一段 4 词文本每步的条件概率。拖一拖——任何一步掉到 0.1，整句概率立刻崩掉一个数量级。这就是为什么训练要用 log（连乘变连加，防下溢），也是 perplexity 取"几何平均"的原因（场景 9）。</div>
+    <div id="chainSliders"></div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="chainP">0.0081</div><div class="k">整句概率 P = ∏ 四步</div></div>
+      <div class="stat"><div class="v mono" id="chainCE">1.20</div><div class="k">每词平均交叉熵 = −(1/T)·log P</div></div>
+    </div>
+  </div>
+
+  <div class="checkpoint" data-check="cp1">
+    <div class="cp-head">◈ 检验点 1</div>
+    <div>"给整段文本打分"的严格式子 P(w₁,…,w<sub>T</sub>) = ？</div>
+    <div class="quiz-opt" data-v="0">A. ∏<sub>t</sub> P(w<sub>t</sub>) —— 每个词独立</div>
+    <div class="quiz-opt" data-v="1">B. ∏<sub>t</sub> P(w<sub>t</sub> | w₁,…,w<sub>t−1</sub>) —— 链式分解</div>
+    <div class="quiz-opt" data-v="2">C. max<sub>t</sub> P(w<sub>t</sub> | w₁,…,w<sub>t−1</sub>)</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 2 · n-gram 之死
+============================================================ -->
+<section class="scene" data-scene="2">
+  <header class="scene-header">
+    <span class="step-label">场景 02 · 问题</span>
+    <h2 class="scene-title">上一代方案：数一数，然后被三个问题拖死</h2>
+    <p class="scene-lead">神经网络之前，语言模型 = 在大语料里数数。思路干净，但死得很具体。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">做法：Markov 假设 + 计数</h3>
+    <p style="font-size:15px;line-height:1.9;">P(w<sub>t+1</sub> | w₁,…,w<sub>t</sub>) 的条件越来越长，没法统计。<b>Markov 假设</b>（这是近似，不是恒等式）：下一个词只依赖前 n−1 个词。于是条件概率用计数估计：</p>
+    <div class="formula small">P(w<sub>t+1</sub> | w<sub>t−n+2</sub>,…,w<sub>t</sub>) ≈ <span class="frac"><span class="num">count(w<sub>t−n+2</sub>,…,w<sub>t</sub>, w<sub>t+1</sub>)</span><span class="den">count(w<sub>t−n+2</sub>,…,w<sub>t</sub>)</span></span></div>
+    <p style="font-size:15px;line-height:1.9;"><b>slides 的实例</b>（4-gram，条件是 "students opened their"）：语料里 "students opened their" 出现 1000 次，其中 400 次接 books、100 次接 exams，于是 P(books|…) = 400/1000 = <b>0.4</b>、P(exams|…) = <b>0.1</b>。注意：<b>条件窗口之外的前文被直接丢弃</b>——"as the proctor started the clock" 对预测毫无影响。这就是 Markov 假设的代价。</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="mini-card" style="border-color:var(--err)"><h4>稀疏问题 ①：上文没见过</h4><p>"students opened their" 若从未在语料出现，分母为 0，对<b>任何</b> w 都算不出概率。<b>缓解 = backoff</b>：退一步只用 "opened their" 做条件（短上下文更常见）。</p></div>
+    <div class="mini-card" style="border-color:var(--err)"><h4>稀疏问题 ②：下一个词没见过</h4><p>上文见过但 "students opened their w" 没见过 → P(w)=0，一句合法话概率变 0。<b>缓解 = smoothing</b>：给每个 w∈V 的计数加一个小 δ，谁也拿不着 0。</p></div>
+    <div class="mini-card"><h4>存储问题：模型 = 一张巨型计数表</h4><p>要存下见过的所有 n-gram 的计数。<b>n 或语料变大，模型就变大</b>——下面拖 n 看爆炸。n 通常 ≤5，因为再大稀疏到完全没法统计。</p></div>
+    <div class="mini-card"><h4>分布没有粒度</h4><p>真实 trigram（Reuters 170 万词）：条件 "the rate of" 后 company 0.153、bank 0.153……概率几乎均摊，<b>数数字数不出"哪个更像"</b>；生成文本"语法惊人地像样，但语义不连贯"——三个词的视野太短。</p></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">存储爆炸：拖 n，看可能表格有多大（V = 10,000，实算）</h3>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">n</span>
+      <input type="range" id="ngramN" min="1" max="5" step="1" value="3">
+      <span class="slider-val" id="ngramNV">3</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="ngramCells">1.0×10¹²</div><div class="k">可能的 n-gram 表项 = Vⁿ</div></div>
+      <div class="stat"><div class="v mono" id="ngramMem">8.0 TB</div><div class="k">若每项存 8 字节计数</div></div>
+    </div>
+    <div class="callout">当然真实语料只出现其中极小一部分——但<b>这恰恰是稀疏问题</b>：表格名义上 Vⁿ 格，见过的不到零头，没见过的全要给 smoothing/backoff 擦屁股。增大 n 的代价是双重的：存储暴涨 + 稀疏加剧。这就是为什么需要把"计数"换成"参数化函数"——下一场景。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp2">
+    <div class="cp-head">◈ 检验点 2</div>
+    <div>4-gram 例子里 P(books | students opened their) = 0.4 是怎么得到的？</div>
+    <div class="quiz-opt" data-v="0">A. 神经网络参数学出来的</div>
+    <div class="quiz-opt" data-v="1">B. 语料计数：400 / 1000</div>
+    <div class="quiz-opt" data-v="2">C. 词典里 books 的词频</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 3 · 固定窗口神经 LM
+============================================================ -->
+<section class="scene" data-scene="3">
+  <header class="scene-header">
+    <span class="step-label">场景 03 · 直觉</span>
+    <h2 class="scene-title">Bengio 的修法：拼接词向量 → 隐藏层 → softmax</h2>
+    <p class="scene-lead">2000/2003 年的 Neural Probabilistic Language Model：不数 n-gram 了，让一个网络直接学"窗口 → 下一词分布"。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">结构（就是 K02 的 MLP，输入是拼接的词向量）</h3>
+    <div class="formula small">x = [e<sub>w₁</sub>; e<sub>w₂</sub>; …; e<sub>w<sub>n−1</sub></sub>] → h = f(Wx + b) → ŷ = softmax(Uh + c)</div>
+    <p style="font-size:15px;line-height:1.9;">前 n−1 个词的词向量（每个 d 维）<b>拼接</b>成 (n−1)d 维输入，过一个隐藏层，softmax 出 V 维分布。对照 n-gram 的三宗罪：<b>改进 ①</b> 没有稀疏问题——任何窗口都映射到连续向量，平滑泛化到没见过的组合；<b>改进 ②</b> 不用存所有 n-gram 计数——模型大小 = 参数量，与语料无关。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">但还剩两个问题（拖窗口大小亲眼验证第一个）</h3>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">窗口 n−1</span>
+      <input type="range" id="winSize" min="2" max="50" step="1" value="4">
+      <span class="slider-val" id="winSizeV">4</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="winParams">8 万</div><div class="k">W₁ 参数量 = d<sub>h</sub> × (n−1)·d（d=100, d<sub>h</sub>=200）</div></div>
+      <div class="stat"><div class="v mono" id="winRNN" style="color:var(--ok)">2 万</div><div class="k">对照：RNN 的 W<sub>xh</sub> = d<sub>h</sub> × d（<b>与窗口无关</b>）</div></div>
+    </div>
+    <div class="callout"><b>剩余问题 ①</b>：窗口放大 → 输入维度 (n−1)d 线性放大 → W₁ 参数量跟着放大，而且<b>窗口永远不够大</b>（"the students opened their" 之外还有整段上文）。<b>剩余问题 ②</b>：第 1 位的词和第 2 位的词乘的是 W₁ 里<b>完全不同的列块</b>——同一个词出现在不同位置被当成不同特征，<b>输入处理没有对称性</b>。这两条都在喊同一个需求：要能处理<b>任意长度</b>输入、且<b>每个位置用同一组权重</b>的架构。→ RNN。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp3">
+    <div class="cp-head">◈ 检验点 3</div>
+    <div>固定窗口神经 LM 相对 n-gram 修好了稀疏和存储，但还剩哪两个问题？</div>
+    <div class="quiz-opt" data-v="0">A. 不能训练 + 不能评测</div>
+    <div class="quiz-opt" data-v="1">B. 窗口放大则 W 跟着变大（且永远不够大）+ 各位置权重不同、没有对称性</div>
+    <div class="quiz-opt" data-v="2">C. 词向量维度太高 + softmax 太贵</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 4 · RNN 结构与手算
+============================================================ -->
+<section class="scene" data-scene="4">
+  <header class="scene-header">
+    <span class="step-label">场景 04 · 概念</span>
+    <h2 class="scene-title">RNN：同一组权重，每个时刻反复用</h2>
+    <p class="scene-lead">核心思想一句话（slides 原话）：<b>"Apply the same weights W repeatedly."</b> 隐藏状态 h 就是随位置流动的记忆。</p>
+  </header>
+
+  <div class="formula">
+    h<sub>t</sub> = f( W<sub>hh</sub> h<sub>t−1</sub> + W<sub>xh</sub> x<sub>t</sub> + b ) ， ŷ<sub>t</sub> = softmax( W<sub>hy</sub> h<sub>t</sub> + c )
+  </div>
+  <p style="font-size:15px;line-height:1.9;">注意 <b>W<sub>hh</sub>、W<sub>xh</sub>、W<sub>hy</sub> 不带时间下标</b>——所有时刻共享同一组矩阵。这正是固定窗口 LM 问题②的正面回答：每个位置的输入被同一组权重处理，<b>对称性回来了</b>；参数量与序列长度无关，<b>任意长度进来了</b>。slides 给的四条优势：① 任意长度输入；② 理论上第 t 步能用到很多步之前的信息；③ 模型大小不随上下文增长；④ 权重共享有对称性。两条劣势先记下，后面全章兑现：<b>① 循环计算慢（不能并行）；② 实践中很难取到很多步之前的信息</b>。</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">手算例：the cat sat（V=4，隐藏维=1，逐步推进）</h3>
+    <p style="font-size:14px;color:var(--fg-2)">W<sub>hh</sub>=0.5；输入权重使 W<sub>xh</sub>·x：the=1、cat=1、sat=2；W<sub>hy</sub> = [1, 0, −1, 1]（对 the/cat/dog/sat）；h₀=0，f=tanh。点按钮逐时刻推进（全部数字本机实跑对账过）：</p>
+    <div class="cg-wrap">
+      <svg id="rnnSvg" viewBox="0 0 900 260" style="width:100%;min-width:640px;height:auto;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);"></svg>
+    </div>
+    <div style="display:flex;gap:8px;margin:12px 0;">
+      <button class="btn btn-primary" id="rnnNext">推进一个时刻 →</button>
+      <button class="btn btn-ghost" id="rnnReset">重置</button>
+    </div>
+    <div class="callout" id="rnnCap">同一组权重将在 3 个时刻被反复使用——盯住 W<sub>hh</sub>=0.5 怎么把上一时刻的记忆乘进来。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">终局对账（t=3，预测 sat 之后下一个词的分布）</h3>
+    <table class="num">
+      <tr><th>量</th><th>值</th></tr>
+      <tr><td class="mono">h₃ = tanh(2.0 + 0.5·0.88113)</td><td class="mono">tanh(2.44056) = <b>0.98494</b></td></tr>
+      <tr><td class="mono">logits = W<sub>hy</sub>·h₃</td><td class="mono">[0.9849, 0, −0.9849, 0.9849]</td></tr>
+      <tr><td class="mono">softmax(logits)</td><td class="mono">[0.3979, 0.1486, 0.0555, 0.3979]（和 = 1）</td></tr>
+    </table>
+    <p style="font-size:14px;color:var(--fg-2);margin-bottom:0;">与讲义 02 §4.1 手算表逐位一致（脚本 k03_demo.py §1b 复核）。读法：模型此刻认为下一个词最可能是 the 或 sat——参数是瞎设的，所以这个分布"不对"很正常；<b>训练</b>就是把真表数据的交叉熵梯度灌回去修这些参数（场景 5、6）。</p>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 5 · 训练：teacher forcing
+============================================================ -->
+<section class="scene" data-scene="5">
+  <header class="scene-header">
+    <span class="step-label">场景 05 · 机制</span>
+    <h2 class="scene-title">训练：每个时刻都是一道独立的预测题</h2>
+    <p class="scene-lead">损失函数没有任何新东西——K02 的交叉熵，只是每个时刻算一次再加起来。</p>
+  </header>
+
+  <div class="formula small">J<sup>(t)</sup> = −log ŷ<sup>(t)</sup><sub>y<sub>t</sub></sub> ， J = <span class="frac"><span class="num">1</span><span class="den">T</span></span> <span class="big">∑</span><sub>t=1..T</sub> J<sup>(t)</sup></div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本机实跑：T=4 的每步损失（k03_demo.py §1）</h3>
+    <div class="bars" id="stepLossBars" style="height:170px;"></div>
+    <div class="kv">
+      <span class="pill">T=4，H=4，V=3</span>
+      <span class="pill">逐步 CE = <b>[1.286, 1.498, 0.773, 1.730]</b></span>
+      <span class="pill">整段 loss（求和）= <b>5.286755</b></span>
+    </div>
+    <p style="font-size:14px;color:var(--fg-2);margin-bottom:0;">这 4 个数是后面 BPTT 对账的"损失来源"——每个时刻的 CE 各自向前反传，梯度在共享权重上<b>累加</b>（场景 6）。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">Teacher forcing：训练时喂"标准答案"</h3>
+    <p style="font-size:15px;line-height:1.9;">训练第 t+1 步的输入是<b>真实的第 t 个词</b>，不是模型自己在第 t 步采样出的词。为什么：训练早期模型输出基本是噪声，若喂自己的输出，误差会沿时间累积、条件分布跑偏，梯度花在纠正"模型幻想出来的上文"上；喂真实词让每一时刻都是一道条件正确的独立预测题，<b>训练信号干净、各时刻损失可直接相加</b>。代价是训测不一致（测试时只能喂自己的输出）——这是后面的课（scheduled sampling / seq2seq 训练）要处理的话题，本课只立"训练时喂真值"这个基线。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>为什么不一次在全语料上算梯度</b>：太贵（内存）。实践上把一句话/一段文档当作一个 batch 的 x₁..x_T，按 SGD 一小批一小批算损失、更新、换批——和 K02 场景 10 的 SGD 是同一件事，只是"一个样本"变成了"一个序列"。</p>
+  </div>
+
+  <div class="checkpoint" data-check="cp4">
+    <div class="cp-head">◈ 检验点 4</div>
+    <div>Teacher forcing 指的是什么？</div>
+    <div class="quiz-opt" data-v="0">A. 训练时把真实的上一词喂进下一步，而不是模型自己的输出</div>
+    <div class="quiz-opt" data-v="1">B. 强制模型复述训练语料</div>
+    <div class="quiz-opt" data-v="2">C. 教师网络替学生网络反向传播</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 6 · BPTT 推导
+============================================================ -->
+<section class="scene" data-scene="6">
+  <header class="scene-header">
+    <span class="step-label">场景 06 · 机制</span>
+    <h2 class="scene-title">BPTT：沿时间反传，逐时刻累加</h2>
+    <p class="scene-lead">K02 的"分叉处相加"沿时间轴展开，就是 BPTT 的全部。规则一条：<b>重复权重的梯度 = 各次出现处梯度之和</b>。</p>
+  </header>
+
+  <div class="card stepper" id="bpttStepper">
+    <h3 style="margin-top:0">推导（建议先自己推：目标 ∂J/∂W<sub>hh</sub>，J = Σ<sub>t</sub> J<sup>(t)</sup>）</h3>
+    <ol>
+      <li class="step show"><b>输出层</b>（K02 场景 6 结论直接用）：∂J<sup>(t)</sup>/∂z<sub>out</sub><sup>(t)</sup> = ŷ<sup>(t)</sup> − y<sup>(t)</sup>，于是到达隐藏状态的是 <b>W<sub>hy</sub>ᵀ(ŷ<sup>(t)</sup> − y<sup>(t)</sup>)</b>。<span class="shp">(H,)</span></li>
+      <li class="step"><b>关键观察</b>：h<sup>(t)</sup> 有<b>两条出边</b>——一条去本时刻的输出，一条去下一时刻的 h<sup>(t+1)</sup>。按 K02"分叉处相加"，定义 δ<sup>(t)</sup> := ∂J/∂h<sup>(t)</sup>：<div class="formula small">δ<sup>(t)</sup> = W<sub>hy</sub>ᵀ(ŷ<sup>(t)</sup>−y<sup>(t)</sup>) + W<sub>hh</sub>ᵀ( f′(z<sup>(t+1)</sup>) ⊙ δ<sup>(t+1)</sup> )</div>第二项里 f′⊙ 是 tanh 的逐元素 Jacobian（K02：对角阵写成 ⊙）。从 t=T 起往回推，末端只有第一项。</li>
+      <li class="step"><b>对参数累加</b>：W<sub>hh</sub> 在<b>每个时刻</b>都参与算 z<sup>(t)</sup>，线性层规则 ∂/∂W = δ·输入ᵀ 在每个时刻各出现一次，求和：<div class="formula small">∂J/∂W<sub>hh</sub> = Σ<sub>t</sub> ( f′(z<sup>(t)</sup>) ⊙ δ<sup>(t)</sup> ) h<sup>(t−1)ᵀ</sup></div><div class="formula small">∂J/∂W<sub>xh</sub> = Σ<sub>t</sub> ( f′(z<sup>(t)</sup>) ⊙ δ<sup>(t)</sup> ) x<sup>(t)ᵀ</sup> ， ∂J/∂W<sub>hy</sub> = Σ<sub>t</sub> (ŷ<sup>(t)</sup>−y<sup>(t)</sup>) h<sup>(t)ᵀ</sup></div></li>
+      <li class="step"><b>最常见的 bug</b>：递推里把 δ<sup>(t+1)</sup> <b>覆盖</b>成新值而不是<b>累加</b>——∂J/∂W<sub>hh</sub> 会静默丢掉更早时刻的贡献，不报错，只是学得慢。手写 RNN 的 backprop 对不上数值梯度时，先查这里。</li>
+      <li class="step"><b>截断（工程）</b>：slides 口径——实践中 BPTT 常 truncated 到约 20 步，更早的路径不展开，省算力；代价是更远的依赖拿不到梯度（这正是下一场景消失问题的工程版）。</li>
+    </ol>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" data-step-next>展开下一步 →</button>
+      <button class="btn btn-ghost" data-step-reset>收起重来</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">三方对账（本机实跑，T=4，loss = 5.2867551100）</h3>
+    <table class="num">
+      <tr><th>梯度</th><th>max|手推 − 数值|</th><th>max|autograd − 手推|</th></tr>
+      <tr><td class="mono">∂J/∂W<sub>hh</sub></td><td>5.9×10⁻¹¹</td><td>1.7×10⁻¹⁶</td></tr>
+      <tr><td class="mono">∂J/∂W<sub>xh</sub></td><td>2.2×10⁻¹⁰</td><td>4.4×10⁻¹⁶</td></tr>
+      <tr><td class="mono">∂J/∂b<sub>h</sub></td><td>6.1×10⁻¹¹</td><td>—</td></tr>
+      <tr><td class="mono">∂J/∂W<sub>hy</sub></td><td>4.4×10⁻¹¹</td><td>3.3×10⁻¹⁶</td></tr>
+      <tr><td class="mono">∂J/∂b<sub>y</sub></td><td>4.3×10⁻¹¹</td><td>—</td></tr>
+    </table>
+    <div class="callout">手推 BPTT 与 torch.autograd 差到 10⁻¹⁶（浮点极限）——<b>BPTT 就是"按时刻反传、逐时刻累加"，没有更多、也没有更少</b>。autograd 不是魔法，它算的就是你手上这条递推式。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 7 · 梯度消失与爆炸
+============================================================ -->
+<section class="scene" data-scene="7">
+  <header class="step-label-wrap scene-header">
+    <span class="step-label">场景 07 · 机制</span>
+    <h2 class="scene-title">消失的梯度：往回传 20 步，信号只剩一亿分之一</h2>
+    <p class="scene-lead">BPTT 的递推里，远端信号要乘一串矩阵。这串矩阵的"等效放大倍数"由谱半径说了算。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">连乘从哪来</h3>
+    <p style="font-size:15px;line-height:1.9;">展开场景 6 的递推，从时刻 t 往回传到时刻 k，要乘的雅可比是：</p>
+    <div class="formula small">∂h<sup>(t)</sup>/∂h<sup>(k)</sup> = <span class="big">∏</span><sub>i=k+1..t</sub> diag( f′(z<sup>(i)</sup>) ) · W<sub>hh</sub></div>
+    <p style="font-size:15px;line-height:1.9;">t−k 个矩阵连乘。对连乘矩阵，长期量级由<b>谱半径</b> ρ(W<sub>hh</sub>)（特征值模的最大值）控制：‖Wⁿ‖ ~ ρⁿ。<b>ρ&lt;1 → 指数衰减到 0（消失）；ρ&gt;1 → 指数放大（爆炸）；几乎没有"恰好稳定"的中间态。</b>（严格表述来自 Pascanu et al. 2013，slides 只给了连乘的直觉图——本结论标注为非 slides 原文。）</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">实测：W = r × 正交矩阵（‖W‖₂ = r 精确成立），看 ‖W²⁰‖（拖 r）</h3>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">谱半径 r</span>
+      <input type="range" id="specR" min="50" max="250" step="1" value="90">
+      <span class="slider-val" id="specRV">0.90</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="specR20">0.1216</div><div class="k">r²⁰（20 步后的信号残留比例）</div></div>
+      <div class="stat"><div class="v" id="specVerdict" style="font-size:19px;">梯度消失</div><div class="k">r&lt;1 → 远端依赖学不到</div></div>
+    </div>
+    <table class="num">
+      <tr><th>r</th><th>‖W²⁰‖₂（实测）</th><th>r²⁰（理论）</th><th>含义</th></tr>
+      <tr><td class="mono">0.5</td><td class="mono">9.54×10⁻⁷</td><td class="mono">9.54×10⁻⁷</td><td style="text-align:left;">20 步前只剩一亿分之一 ≈ 信号丢光</td></tr>
+      <tr><td class="mono">0.9</td><td class="mono">1.22×10⁻¹</td><td class="mono">1.22×10⁻¹</td><td style="text-align:left;">剩 12%——只按近端效应更新</td></tr>
+      <tr><td class="mono">1.0</td><td class="mono">1.00</td><td class="mono">1.00</td><td style="text-align:left;">临界（但 tanh′≤1，实际仍衰减，见下表）</td></tr>
+      <tr><td class="mono">1.1</td><td class="mono">6.73</td><td class="mono">6.73</td><td style="text-align:left;">开始放大</td></tr>
+      <tr><td class="mono">1.5</td><td class="mono">3.33×10³</td><td class="mono">3.33×10³</td><td style="text-align:left;">爆炸</td></tr>
+      <tr><td class="mono">2.5</td><td class="mono">9.09×10⁷</td><td class="mono">9.09×10⁷</td><td style="text-align:left;">SGD 一步飞出参数空间 → Inf/NaN</td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--fg-3);margin-bottom:0;">实测与 r²⁰ 的比值全为 1.000000——构造矩阵是正交矩阵的倍数，谱范数精确等于 rⁿ。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">加回 tanh 的真实情况：每步因子 = r·tanh′(z)，tanh′ ≤ 1</h3>
+    <table class="num">
+      <tr><th>r</th><th>‖∏ diag(tanh′)·W‖₂（实测）</th><th>‖回传梯度‖₂</th></tr>
+      <tr><td class="mono">0.9</td><td class="mono">9.52×10⁻²</td><td class="mono">1.37×10⁻¹</td></tr>
+      <tr><td class="mono">1.0</td><td class="mono"><b>0.504</b></td><td class="mono">0.664</td></tr>
+      <tr><td class="mono">1.5</td><td class="mono">3.68</td><td class="mono">5.55</td></tr>
+      <tr><td class="mono">2.5</td><td class="mono"><b>0.184</b></td><td class="mono">0.273</td></tr>
+    </table>
+    <ul style="font-size:15px;line-height:1.9;">
+      <li><b>r=1 也在衰减</b>（0.504 而不是 1）：tanh′ ≤ 1 每步再砍一刀。tanh′ 最大 = 1 只在 z=0 处，饱和区趋近 0。</li>
+      <li><b>r=2.5 反而比 r=1.5 小</b>：状态被大权重推进 tanh 饱和区，tanh′→0，"自动刹车"。这是真实 tanh RNN 的一个缓解因素——但只是缓解，机制没变，工程上仍常要剪裁（下一场景）。</li>
+      <li><b>后果落回任务</b>（slides p46–47）：远端梯度 ≪ 近端 → 权重只按近端更新 → 学不会 "tickets（第 7 步出现）→ 句末目标词" 这类长距离依赖，测试时也预测不了。</li>
+    </ul>
+  </div>
+
+  <div class="checkpoint" data-check="cp5">
+    <div class="cp-head">◈ 检验点 5</div>
+    <div>谱半径 r = 0.9 的循环权重，反传 20 步后梯度信号约剩多少？</div>
+    <div class="quiz-opt" data-v="0">A. 90%</div>
+    <div class="quiz-opt" data-v="1">B. 0.9 × 20 ≈ 18 倍</div>
+    <div class="quiz-opt" data-v="2">C. 0.9²⁰ ≈ 12%</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 8 · 梯度剪裁
+============================================================ -->
+<section class="scene" data-scene="8">
+  <header class="scene-header">
+    <span class="step-label">场景 08 · 机制</span>
+    <h2 class="scene-title">梯度剪裁：同方向，小步走</h2>
+    <p class="scene-lead">爆炸的修法粗暴有效：范数超阈值就按比例缩。但它对消失<b>完全无效</b>——为什么？</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">公式与交互（本机实跑的那组数：‖g‖ = 1.82×10⁸）</h3>
+    <div class="formula small">g ← <span style="display:inline-flex;flex-direction:column;text-align:left;"><span>g，若 ‖g‖ ≤ τ</span><span>(τ/‖g‖)·g，若 ‖g‖ &gt; τ</span></span></div>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">log₁₀(阈值 τ)</span>
+      <input type="range" id="clipT" min="-2" max="80" step="1" value="0">
+      <span class="slider-val mono" id="clipTV">1.0</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="clipNorm">1.0</div><div class="k">剪裁后梯度范数</div></div>
+      <div class="stat"><div class="v mono" id="clipStep">0.1</div><div class="k">SGD 步长 = lr·‖g_clip‖（lr=0.1）</div></div>
+      <div class="stat"><div class="v mono" style="color:var(--ok)">cos = 1.000</div><div class="k">方向余弦（剪裁前后方向不变）</div></div>
+    </div>
+    <div class="callout">实跑对照：不剪裁时一步长度 = 0.1 × 1.82×10⁸ = <b>1.8×10⁷</b>（slides 的吐槽："你以为找到一座山，结果人在爱荷华"；最坏 Inf/NaN 只能从 checkpoint 重来）。剪裁到 τ=1 后一步 = <b>0.1</b>。把 τ 拖过 1.82×10⁸（log ≈ 8.26），剪裁器不再触发——公式第一段原样返回 g。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">为什么治爆炸不治消失（T2 验收 A5 的原题）</h3>
+    <p style="font-size:15px;line-height:1.9;">逐行读公式就明白了：剪裁的作用域只有 <b>‖g‖ &gt; τ</b> 那一支；消失发生在 <b>‖g‖ ≤ τ</b>（甚至 ≈0）那一支——公式<b>原样返回 g，什么都不做</b>。代入 SGD 看得更清楚：剪裁后步长 = α·min(‖g‖, τ)，<b>有上界、没下界</b>。梯度小是"信号丢了"，不是"步子小了"——把一个小信号再缩一遍毫无帮助。</p>
+    <p style="font-size:15px;line-height:1.9;"><b>为什么消失难治</b>：根因是结构性的——vanilla RNN 的隐藏状态<b>每一步都被重写</b>，信息要跨 n 步就得在连乘里活过 n 个雅可比。只改步长不改结构，连乘还在那里。所以治消失要动结构（slides p50 点名的方向 + 标准代价分析）：</p>
+    <table class="cmp">
+      <tr><th>手段</th><th>怎么绕开"每步重写"</th><th>代价</th></tr>
+      <tr><td><b>LSTM</b></td><td>加一条独立记忆带，用门控制读写，信息"加"进去而不是被覆盖</td><td>参数更多、结构更复杂；<b>仍是串行</b>，长程只是改善非根治</td></tr>
+      <tr><td><b>Attention</b></td><td>任意两位置直接连线，不再只靠一条链传</td><td><b>O(n²)</b> 计算/显存随序列长度平方涨（K04 的核心代价）</td></tr>
+      <tr><td><b>Residual</b></td><td>h<sub>t</sub> = h<sub>t−1</sub> + F(·)：恒等项的雅可比是 I，梯度有近乎直通的路</td><td>需维度对齐；本身不建模长程依赖，需配合其他结构</td></tr>
+    </table>
+    <div class="callout">三者共同点：<b>都在改"连乘结构"</b>——LSTM 让记忆不被重写，attention 让路径不必长，residual 让连乘里出现恒等项。这正是它们能治消失、而剪裁不能的原因。这个对比是 A4/A5 验收的标准答案骨架。</div>
+  </div>
+
+  <div class="checkpoint" data-check="cp6">
+    <div class="cp-head">◈ 检验点 6</div>
+    <div>梯度剪裁为什么治爆炸、不治消失？</div>
+    <div class="quiz-opt" data-v="0">A. 剪裁只在 ‖g‖&gt;τ 时按比例缩；‖g‖ 太小时原样返回，什么都不做</div>
+    <div class="quiz-opt" data-v="1">B. 剪裁会反转梯度的方向</div>
+    <div class="quiz-opt" data-v="2">C. 剪裁把学习率也一起调大了</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 9 · perplexity
+============================================================ -->
+<section class="scene" data-scene="9">
+  <header class="scene-header">
+    <span class="step-label">场景 09 · 评测</span>
+    <h2 class="scene-title">perplexity：交叉熵取个指数，立刻可读</h2>
+    <p class="scene-lead">LM 的标准指标。定义一行，性质三条，全部可亲手验证。</p>
+  </header>
+
+  <div class="formula">ppl = exp( <span class="frac"><span class="num">1</span><span class="den">T</span></span> <span class="big">∑</span><sub>t</sub> J<sup>(t)</sup> ) = ( <span class="big">∏</span><sub>t</sub> <span class="frac"><span class="num">1</span><span class="den">P(w<sub>t+1</sub>|…)</span></span> )<sup>1/T</sup></div>
+  <p style="font-size:15px;line-height:1.9;">两种读法对应公式的两半：<b>"逆概率"</b>（模型给真实下一词的概率取倒数，越小越好）+<b>"按词数归一"</b>（几何平均，文本长短不影响读数）。直观读法：<b>ppl = k ⟺ 模型平均每步在 k 个词之间犹豫</b>。</p>
+
+  <div class="card">
+    <h3 style="margin-top:0">拖交叉熵，看 perplexity（实算）</h3>
+    <div class="slider-wrap">
+      <span style="font-size:14px;color:var(--fg-2)">每词交叉熵 CE</span>
+      <input type="range" id="pplCE" min="0" max="800" step="1" value="69">
+      <span class="slider-val mono" id="pplCEV">0.69</span>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="v mono" id="pplVal">2.00</div><div class="k">ppl = exp(CE)</div></div>
+      <div class="stat"><div class="v mono" id="pplRead" style="font-size:17px;">平均在 2 个词间犹豫</div><div class="k">直观读法</div></div>
+    </div>
+    <table class="num">
+      <tr><th>CE（本机实跑）</th><th>ppl</th><th>含义</th></tr>
+      <tr><td class="mono">0.000000</td><td class="mono">1.000000</td><td style="text-align:left;">完美预测（下界）</td></tr>
+      <tr><td class="mono">0.693147</td><td class="mono">2.000000</td><td style="text-align:left;">二选一</td></tr>
+      <tr><td class="mono">1.000000</td><td class="mono">2.718282</td><td style="text-align:left;">e 选 1</td></tr>
+      <tr><td class="mono">2.302585</td><td class="mono">9.999999</td><td style="text-align:left;">十选一</td></tr>
+      <tr><td class="mono">6.907755</td><td class="mono">999.999721</td><td style="text-align:left;"><b>= log 1000：在 1000 词表上均匀瞎猜的基线</b></td></tr>
+    </table>
+    <div class="callout">三条性质（都可从定义直接推）：① ppl ≥ 1（概率 ≤1 ⟹ 逆概率 ≥1）；② <b>均匀模型的 ppl = V</b>（CE = log V ⟹ ppl = e<sup>log V</sup> = V）——这就是"什么都没学到"的基线，任何模型的 ppl 低于 V 才算开始学；③ 越小越好。取指数的全部理由就是<b>可读性</b>："ppl 从 1000 降到 20"比"CE 从 6.9 降到 3.0"更像人话。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 10 · seq2seq 与收官
+============================================================ -->
+<section class="scene" data-scene="10">
+  <header class="scene-header">
+    <span class="step-label">场景 10 · 收官</span>
+    <h2 class="scene-title">seq2seq、bottleneck，与通向 K04 的门</h2>
+    <p class="scene-lead">RNN 的第一个大胜仗是机器翻译；它留下的两个伤口，正是注意力要堵的。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">Encoder–Decoder：条件语言模型</h3>
+    <svg id="s2sSvg" viewBox="0 0 900 220" style="width:100%;min-width:640px;height:auto;background:var(--bg-2);border-radius:12px;border:1px solid var(--border);"></svg>
+    <p style="font-size:15px;line-height:1.9;">Encoder RNN 读完源句，把<b>最后的隐藏状态</b>作为整句的编码；Decoder RNN 以它为初始状态逐词生成译文——每步算 P(y<sub>t</sub> | y₁..y<sub>t−1</sub>, <b>x</b>)。slides 的精准概括：它是<b>条件语言模型</b>——"Language Model because 预测目标句下一词；Conditional because 还条件于源句 x"。损失仍是逐步交叉熵取平均，反向传播<b>端到端贯穿 encoder + decoder</b>。通用性极强：摘要、对话、句法分析、代码生成，输入输出是序列就能套。历史节点：2014 年 NMT 还是边缘尝试，<b>2016 年谷歌翻译从 SMT 切到 NMT</b>——数百工程师多年搭的系统被小团队几个月的模型超过。</p>
+    <div class="callout warn"><b>bottleneck</b>：encoder 与 decoder 之间<b>只有一根线</b>——整个源句被压成一个定长向量。slides 直接在图上标注 "Conditioning = Bottleneck" 并发问 "Problems with this architecture?"。症状：源句越长翻译越差（一个向量装不下）；解码不同时刻需要源句不同部分，却只能从同一个向量里取。<b>K04 的注意力让解码器每步直接回看源句的每个位置</b>——既解 bottleneck，又（配合并行结构）解 RNN 不能并行。</div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本章数学地图（每个式子都应能默写）</h3>
+    <table class="cmp">
+      <tr><th>对象</th><th>式子</th><th>一句话</th></tr>
+      <tr><td>整段打分</td><td>P = ∏<sub>t</sub> P(w<sub>t</sub>|w₁..w<sub>t−1</sub>)</td><td>链式分解（恒等式）</td></tr>
+      <tr><td>n-gram</td><td>P ≈ count(n-gram)/count((n−1)-gram)</td><td>Markov 假设（近似）</td></tr>
+      <tr><td>RNN 更新</td><td>h<sub>t</sub> = f(W<sub>hh</sub>h<sub>t−1</sub> + W<sub>xh</sub>x<sub>t</sub> + b)</td><td>同一组 W 反复用</td></tr>
+      <tr><td>BPTT 递推</td><td>δ<sup>(t)</sup> = W<sub>hy</sub>ᵀ(ŷ−y) + W<sub>hh</sub>ᵀ(f′⊙δ<sup>(t+1)</sup>)</td><td>分叉处相加沿时间展开</td></tr>
+      <tr><td>重复权重梯度</td><td>∂J/∂W<sub>hh</sub> = Σ<sub>t</sub> (f′⊙δ<sup>(t)</sup>)h<sup>(t−1)ᵀ</sup></td><td>各时刻之和</td></tr>
+      <tr><td>消失/爆炸</td><td>∂h<sup>(t)</sup>/∂h<sup>(k)</sup> = ∏ diag(f′)W<sub>hh</sub> ~ ρ<sup>t−k</sup></td><td>谱半径定生死</td></tr>
+      <tr><td>梯度剪裁</td><td>g ← (τ/‖g‖)g 若 ‖g‖&gt;τ</td><td>同方向小步走，不治消失</td></tr>
+      <tr><td>perplexity</td><td>ppl = exp(CE)</td><td>越小越好；均匀 = V</td></tr>
+      <tr><td>seq2seq</td><td>P(y<sub>t</sub>|y₁..y<sub>t−1</sub>, x)</td><td>条件语言模型</td></tr>
+    </table>
+  </div>
+
+  <div class="card" id="finalQuiz">
+    <h3 style="margin-top:0">期末检验 · 6 题</h3>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">合书自测 · 能讲清才算过</h3>
+    <p style="font-size:14px;color:var(--fg-2)">先合上页面口头回答，再点开对答案。讲不出来的进错题本。</p>
+    <ul class="self-test" id="selfTest"></ul>
+  </div>
+
+  <div class="card score-card">
+    <div style="font-size:14px;color:var(--fg-3);letter-spacing:.1em;text-transform:uppercase;">本章得分</div>
+    <div class="score-big" id="finalScore">0 / 14</div>
+    <p style="color:var(--fg-2);max-width:560px;margin:10px auto 20px;" id="finalMsg"></p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a class="btn btn-primary btn-large" href="index.html" style="text-decoration:none;">回到学习路径 →</a>
+      <button class="btn btn-large" id="resetBtn">重学本章</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本章没能验证的部分（诚实清单）</h3>
+    <ul style="font-size:14px;color:var(--fg-2);line-height:1.9;margin:0;padding-left:18px;">
+      <li>slides 的图（RNN 展开、teacher forcing、encoder-decoder 结构）是图片层，PDF 文字层提取为空；本页用 SVG 按文字口径重绘，逐页核对请看 PDF。</li>
+      <li>∏W 谱半径的严格定理（Pascanu et al. 2013）未给完整证明；本页只有构造网络（W = r×正交）的实测佐证。</li>
+      <li>"truncated BPTT ~20 步"是 slides 工程口径，未做不同截断长度的对照实验。</li>
+      <li>LSTM / attention / residual 缓解消失的"效果"与代价分析是标准工程结论，本仓库未跑对照。</li>
+      <li>本章实测都在"几维、几步"的构造网络上，讲机制，不能外推真实规模。</li>
+      <li>本课无配套作业；T2 验收 A4/A5 的问答尚未在用户身上验收。</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<!-- ================= 底部场景导航 ================= -->
+<div class="scene-footer">
+  <button class="btn" id="prevBtn">← 上一节</button>
+  <div class="dots" id="dots"></div>
+  <button class="btn btn-primary" id="nextBtn">下一节 →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<noscript><p style="padding:100px 20px;text-align:center;">本页需要 JavaScript（全部内容离线本地运行，不联网）。</p></noscript>
+
+<script src="assets/k03.js"></script>
+</body>
+</html>

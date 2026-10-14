@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A1 轮椅 · 词向量实战上手桥 — CS224N 学习路径</title>
+<meta name="description" content="A1 Part 1 四函数上手桥：环境门 → 手算共现矩阵 → 逐函数提示阶梯。不给答案，只给桥。">
+<link rel="stylesheet" href="assets/k01.css">
+<style>
+.hero-num{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(120px, 22vw, 220px); line-height: .9; font-weight: 900;
+  color: transparent; -webkit-text-stroke: 2px rgba(148,163,184,.35);
+  letter-spacing:-.04em; user-select:none; margin: 10px 0 0;
+}
+.formula{
+  font-family: Georgia, "Times New Roman", serif; font-size: 19px;
+  display:flex; align-items:center; justify-content:center; gap:7px; flex-wrap:wrap;
+  padding: 16px 12px; background: var(--bg-2); border:1px solid var(--border); border-radius:12px; margin: 14px 0;
+}
+.formula sub, .formula sup{ font-size: 12px;}
+.mono{ font-family: Consolas, "Cascadia Code", monospace; font-variant-numeric:tabular-nums;}
+.code{
+  font-family: Consolas, "Cascadia Code", monospace; font-size:14px; line-height:1.8;
+  background: var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px 18px; margin:12px 0;
+  overflow-x:auto; white-space:pre;
+}
+.code .cm{ color: var(--fg-3);}
+.code .kw{ color: var(--accent-2);}
+.code .hole{ background: rgba(251,191,36,.18); border-bottom:2px dashed var(--warn); color: var(--warn); padding:0 4px; font-weight:700;}
+.stat-row{ display:flex; gap:14px; flex-wrap:wrap; margin:16px 0;}
+.stat{ flex:1; min-width:150px; background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px;}
+.stat .v{ font-size:24px; font-weight:800; color: var(--accent); font-variant-numeric:tabular-nums;}
+.stat .k{ font-size:12px; color:var(--fg-3); margin-top:2px;}
+.checkpoint{ border:1px dashed rgba(56,189,248,.4); border-radius: var(--radius); padding:18px 20px; margin:22px 0; background: rgba(56,189,248,.05);}
+.checkpoint .cp-head{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:13px; letter-spacing:.06em; color:var(--accent); text-transform:uppercase; margin-bottom:8px;}
+.cp-feedback{ margin-top:10px; font-size:14px; font-weight:600; min-height:20px;}
+.cp-feedback.good{ color: var(--ok);}
+.cp-feedback.bad{ color: var(--err);}
+table.cmp{ width:100%; border-collapse:collapse; font-size:14px; margin:12px 0;}
+table.cmp th, table.cmp td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+table.cmp th{ color:var(--fg-3); font-size:12px; text-transform:uppercase; letter-spacing:.05em;}
+table.num{ width:100%; border-collapse:collapse; font-size:13px; margin:10px 0;}
+table.num th, table.num td{ text-align:left; padding:6px 10px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums;}
+.self-test{ list-style:none; padding:0; margin:0;}
+.self-test li{ border:1px solid var(--border); border-radius:12px; margin:10px 0; overflow:hidden;}
+.self-test .q{ padding:14px 16px; cursor:pointer; font-weight:600; display:flex; justify-content:space-between; align-items:center; background:var(--bg-2);}
+.self-test .q:hover{ border-color:var(--accent);}
+.self-test .q .hint{ font-size:12px; color:var(--fg-3); font-weight:500; flex-shrink:0; margin-left:10px;}
+.self-test .a{ display:none; padding:14px 16px; color:var(--fg-2); font-size:14px; border-top:1px solid var(--border); line-height:1.8;}
+.self-test li.open .a{ display:block; animation: fadeUp .3s ease both;}
+.score-card{ text-align:center; padding:30px;}
+.score-big{ font-size:64px; font-weight:900; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;}
+.toast{
+  position:fixed; left:50%; bottom:86px; transform:translateX(-50%) translateY(20px);
+  background:var(--bg-1); border:1px solid var(--accent); color:var(--fg); border-radius:12px;
+  padding:10px 18px; font-size:14px; font-weight:600; opacity:0; pointer-events:none; transition:.3s; z-index:99;
+  box-shadow: var(--shadow);
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0);}
+
+/* 环境门 checklist */
+.env-item{ display:flex; gap:14px; align-items:flex-start; background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin:10px 0;}
+.env-check{ flex:0 0 26px; width:26px; height:26px; border-radius:8px; border:2px solid var(--fg-3); cursor:pointer; display:grid; place-items:center; font-size:15px; font-weight:800; color:transparent; transition:.2s; margin-top:2px;}
+.env-item.done .env-check{ border-color:var(--ok); background:rgba(52,211,153,.15); color:var(--ok);}
+.env-item.done .env-title{ color:var(--fg-2); text-decoration: line-through;}
+.env-title{ font-weight:700; font-size:15px;}
+.env-cmd{ font-family:Consolas,monospace; font-size:12.5px; color:var(--fg-2); background:var(--bg-0); border-radius:8px; padding:8px 10px; margin-top:8px; display:block; overflow-x:auto;}
+.env-expect{ font-size:12px; color:var(--fg-3); margin-top:6px;}
+.env-expect b{ color:var(--ok);}
+
+/* 手算矩阵 */
+.mx{ display:grid; gap:3px; font-size:12px; font-variant-numeric:tabular-nums; margin:12px 0; user-select:none;}
+.mx .c{ background:var(--bg-2); border-radius:6px; min-width:44px; padding:6px 4px; text-align:center; transition:.12s;}
+.mx .c.h{ background:transparent; color:var(--fg-3); font-weight:600; font-size:11px;}
+.mx .c.rowh{ background:transparent; color:var(--warn); font-weight:700;}
+.mx .c.pick{ background:var(--bg-2); cursor:pointer; border:1px solid var(--border);}
+.mx .c.pick:hover{ border-color:var(--accent);}
+.mx .c.on{ background:rgba(56,189,248,.22); color:var(--accent); font-weight:800; border:1px solid var(--accent);}
+.mx .c.rev{ background:rgba(52,211,153,.18); color:var(--ok); font-weight:800;}
+
+/* 提示阶梯 */
+.hint-ladder .lv{ display:none; border-left:3px solid var(--accent-2); background:rgba(129,140,248,.07); border-radius:0 10px 10px 0; padding:12px 16px; margin:10px 0; font-size:14.5px; line-height:1.9; animation: fadeUp .3s ease both;}
+.hint-ladder .lv.show{ display:block;}
+.hint-ladder .lv .tag{ font-size:11px; font-weight:800; letter-spacing:.08em; color:var(--accent-2); text-transform:uppercase; display:block; margin-bottom:4px;}
+
+/* 热身小测 */
+.pr-card{ background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin:12px 0;}
+.pr-card .pq{ font-family:Consolas,monospace; font-size:13.5px; margin-bottom:10px; overflow-x:auto; white-space:pre;}
+.pr-opts{ display:flex; gap:8px; flex-wrap:wrap;}
+.pr-opt{ background:var(--bg-3); border:1px solid var(--border); border-radius:8px; padding:6px 12px; font-family:Consolas,monospace; font-size:13px; cursor:pointer; transition:.15s;}
+.pr-opt:hover{ border-color:var(--accent);}
+.pr-opt.ok{ background:rgba(52,211,153,.18); border-color:var(--ok); color:var(--ok); font-weight:700;}
+.pr-opt.no{ background:rgba(248,113,113,.15); border-color:var(--err); color:var(--err);}
+
+/* Predict-Run 卡 */
+.predict-reveal{ display:none; margin-top:12px; border-top:1px dashed var(--border); padding-top:12px; animation: fadeUp .3s ease both;}
+.predict-reveal.show{ display:block;}
+
+.contract-grid{ display:grid; grid-template-columns: repeat(2, 1fr); gap:14px;}
+@media (max-width: 860px){ .contract-grid{ grid-template-columns: 1fr;}}
+.contract{ background:var(--bg-2); border:1px solid var(--border); border-radius:12px; padding:16px;}
+.contract h4{ margin:0 0 6px; font-size:15px;}
+.contract .sig{ font-family:Consolas,monospace; font-size:12.5px; color:var(--accent); background:var(--bg-0); border-radius:8px; padding:8px 10px; margin:8px 0; overflow-x:auto;}
+.contract p{ margin:6px 0; font-size:13.5px; color:var(--fg-2);}
+
+@media (max-width: 720px){
+  .scene{ padding: 76px 16px 110px;}
+  .progress-track{ width:70px;}
+  .brand-text small{ display:none;}
+}
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <a class="brand" href="index.html">
+    <div class="brand-mark">N</div>
+    <div class="brand-text">CS224N 学习路径<small>A1 轮椅 · 四函数上手桥</small></div>
+  </a>
+  <div class="nav-right">
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0 / 8</div>
+    </div>
+    <button class="nav-btn" id="themeBtn">☾ 浅色</button>
+    <a class="nav-btn" href="index.html" style="text-decoration:none;">⌂ 路径</a>
+  </div>
+</nav>
+
+<div class="scene-container" id="scenes">
+
+<!-- ============================================================
+     场景 0 · 封面
+============================================================ -->
+<section class="scene scene-cover" data-scene="0">
+  <div class="cover-badge">CS224N · 作业 A1 · Part 1</div>
+  <div class="hero-num">A1</div>
+  <h1 class="cover-title">轮椅：桥可以拆，答案没有</h1>
+  <p class="cover-lead">这页<b>不替写作业</b>。它给你四级桥：环境门 → 看懂输出 → 手算对账 → 提示阶梯。<br>桥用完即撤——最终验收是<b>关掉本页</b>，在 notebook 里把四个函数写出来。</p>
+  <div class="cover-meta">10 个场景 · 4 检验点 · 2 个手算任务 · 1 组合书自测</div>
+  <button class="btn btn-primary btn-large" id="startBtn">过环境门 →</button>
+  <div class="scene-map" id="sceneMap"></div>
+</section>
+
+<!-- ============================================================
+     场景 1 · 环境门
+============================================================ -->
+<section class="scene" data-scene="1">
+  <header class="scene-header">
+    <span class="step-label">台阶 0 · 环境门</span>
+    <h2 class="scene-title">先把路铺平：四个检查，全绿再开工</h2>
+    <p class="scene-lead">在终端逐条跑（Python 用 pytorch_env），实际打勾。任何一条红了，先修环境再碰代码。</p>
+  </header>
+
+  <div id="envList"></div>
+
+  <div class="card">
+    <h3 style="margin-top:0">两条反直觉的事实（已实测，别被旧资料骗）</h3>
+    <ul style="font-size:15px;line-height:2;margin:0;padding-left:20px;">
+      <li><b>cell-1 不是离线 cell</b>：它 import gensim 并 <code>load_dataset("stanfordnlp/imdb")</code>——Part 1 的语料就来自这里（NUM_SAMPLES=150）。「Part 1 不需要联网」是错的；好在 IMDB 已预下载进 HF 缓存，正常跑是秒过。</li>
+      <li><b>import 顺序有意义</b>：notebook 在 import numpy <b>之前</b>先 import gensim。别自作聪明重排 cell-1。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 2 · Predict-Run：先预测，再看输出
+============================================================ -->
+<section class="scene" data-scene="2">
+  <header class="scene-header">
+    <span class="step-label">台阶 ① · 看得懂</span>
+    <h2 class="scene-title">Predict–Run：预测在先，揭盅在后</h2>
+    <p class="scene-lead">下面三段都是 notebook 里的真实对象。每段先点你的预测，再揭晓实测结果——预测错了别跳，想清楚为什么。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">预测 1：测试语料的词表</h3>
+    <div class="code">test_corpus = [
+  "&lt;START&gt; All that glitters isn't gold &lt;END&gt;".split(" "),
+  "&lt;START&gt; All's well that ends well &lt;END&gt;".split(" "),
+]
+distinct_words(test_corpus)  <span class="cm"># 返回几个词？</span></div>
+    <div class="pr-opts" id="pr1">
+      <span class="pr-opt" data-a="0">8</span>
+      <span class="pr-opt" data-a="1">10</span>
+      <span class="pr-opt" data-a="2">12</span>
+    </div>
+    <div class="predict-reveal" id="pr1r">
+      <b>实测：10 个。</b>逐个数：&lt;START&gt;、&lt;END&gt;、All、All's、that、glitters、isn't、gold、well、ends。注意 <b>All ≠ All's</b>（分词后是两个 type）、<b>well 出现两次只算一个</b>（type vs token 的区别，这正是这个函数存在的意义）。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">预测 2：共现矩阵的形状和总数</h3>
+    <div class="code">M, word2ind = compute_co_occurrence_matrix(test_corpus, window_size=1)
+<span class="cm"># M.shape = ？ M 里非零元素有几个？</span></div>
+    <div class="pr-opts" id="pr2">
+      <span class="pr-opt" data-a="0">(10,10)，非零 16</span>
+      <span class="pr-opt" data-a="1">(10,10)，非零 24</span>
+      <span class="pr-opt" data-a="2">(7,10)，非零 14</span>
+    </div>
+    <div class="predict-reveal" id="pr2r">
+      <b>实测：(10,10)，非零 24。</b>两句共 14 个 token，每个 token 当一次中心；window=1 时中间位置贡献 2 条边、句首/句尾各贡献 1 条 → 有向计数 24，对称分布成 12 对。<b>对角线全 0</b>（没有词和自己相邻）。下一场景你亲手数出其中两行。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">预测 3：TruncatedSVD 之后</h3>
+    <div class="code">M_reduced = reduce_to_k_dim(M, k=2)
+<span class="cm"># M_reduced.shape = ？ 它在数学上对应 SVD 的哪部分？</span></div>
+    <div class="pr-opts" id="pr3">
+      <span class="pr-opt" data-a="0">(2,10)，是 V 的前两行</span>
+      <span class="pr-opt" data-a="1">(10,2)，是 U·S（左奇异向量×奇异值）</span>
+      <span class="pr-opt" data-a="2">(10,2)，是 U 的前两列（不含 S）</span>
+    </div>
+    <div class="predict-reveal" id="pr3r">
+      <b>实测：(10,2)，U·S。</b>sklearn 的 <code>TruncatedSVD.fit_transform</code> 返回 X≈UΣVᵀ 里的 <b>U·Σ 前 k 列</b>——每个词一个 k 维向量。K01 场景 5 讲过：保留前 k 个奇异值 = Eckart–Young 最优秩-k 近似。
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 3 · 手算共现矩阵（核心 Investigate）
+============================================================ -->
+<section class="scene" data-scene="3">
+  <header class="scene-header">
+    <span class="step-label">台阶 ② · 追得透</span>
+    <h2 class="scene-title">手算两行，把"共现"刻进手里</h2>
+    <p class="scene-lead">规则一句话（官方口径）：<b>每个词轮流当中心，数它左右 window_size 格内的邻居，每个邻居 +1。无距离加权。</b>点格子填 0/1，检查对账。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">语料与编号（sorted 后，Python 字典序）</h3>
+    <div class="code">doc1: &lt;START&gt; All that glitters isn't gold &lt;END&gt;
+doc2: &lt;START&gt; All's well that ends well &lt;END&gt;</div>
+    <table class="num">
+      <tr><th>idx</th><td class="mono">0</td><td class="mono">1</td><td class="mono">2</td><td class="mono">3</td><td class="mono">4</td><td class="mono">5</td><td class="mono">6</td><td class="mono">7</td><td class="mono">8</td><td class="mono">9</td></tr>
+      <tr><th>词</th><td class="mono">&lt;END&gt;</td><td class="mono">&lt;START&gt;</td><td class="mono">All</td><td class="mono">All's</td><td class="mono">ends</td><td class="mono">glitters</td><td class="mono">gold</td><td class="mono">isn't</td><td class="mono">that</td><td class="mono">well</td></tr>
+    </table>
+    <p style="font-size:13.5px;color:var(--fg-3);margin-bottom:0;">排序细节：Python 字符串按 ASCII 比，<code>&lt;END&gt;</code> 的 E(69) &lt; <code>&lt;START&gt;</code> 的 S(83)，大写排小写前——所以 &lt;END&gt; 在 0 号位。<b>这个顺序就是 word2ind 的顺序</b>，你的函数必须复现它（用 sorted() 就自然对）。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">任务 1：填 "that"（idx=8）的共现行，window=1</h3>
+    <p style="font-size:14px;color:var(--fg-2)">"that" 在 doc1 位置 2（邻居 All、glitters），在 doc2 位置 3（邻居 well、ends）。点下面格子把 1 标出来：</p>
+    <div class="mx" id="mxThat"></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-primary" id="chkThat">检查</button>
+      <span class="cp-feedback" id="fbThat"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">任务 2：填 "well"（idx=9）的共现行</h3>
+    <p style="font-size:14px;color:var(--fg-2)">"well" 在 doc2 出现<b>两次</b>（位置 2 和位置 5）——两次都要数。自己先在心里数，再点格子：</p>
+    <div class="mx" id="mxWell"></div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-primary" id="chkWell">检查</button>
+      <span class="cp-feedback" id="fbWell"></span>
+    </div>
+  </div>
+
+  <div class="card" id="fullMatrixCard" style="display:none;">
+    <h3 style="margin-top:0">全矩阵对账（M_test_ans，官方答案）</h3>
+    <div class="mx" id="mxFull" style="font-size:11px;"></div>
+    <p style="font-size:13.5px;color:var(--fg-3);margin-bottom:0;">验证三件事：① 对称（M = Mᵀ，因为每条边被两个方向各数一次）；② 对角线全 0；③ 非零共 24 格 = 12 对。</p>
+  </div>
+
+  <div class="checkpoint" data-check="cp1">
+    <div class="cp-head">◈ 检验点 1</div>
+    <div>window=1 时，"that" 的共现词一共几个？</div>
+    <div class="quiz-opt" data-v="0">A. 2（只数 doc1）</div>
+    <div class="quiz-opt" data-v="1">B. 4（All、glitters、well、ends——两句各两个邻居）</div>
+    <div class="quiz-opt" data-v="2">C. 8（两个 window 内的全部词）</div>
+    <div class="cp-feedback"></div>
+  </div>
+
+  <div class="checkpoint" data-check="cp2">
+    <div class="cp-head">◈ 检验点 2</div>
+    <div>共现矩阵为什么必然对称？</div>
+    <div class="quiz-opt" data-v="0">A. 因为词表是排序的</div>
+    <div class="quiz-opt" data-v="1">B. 因为 SVD 保持对称性</div>
+    <div class="quiz-opt" data-v="2">C. 因为"a 在 b 旁边" ⟺ "b 在 a 旁边"：每个词轮流当中心时，同一条边被两个方向各数一次</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 4 · 工具桥：numpy 热身
+============================================================ -->
+<section class="scene" data-scene="4">
+  <header class="scene-header">
+    <span class="step-label">台阶 ③ · 仿得来</span>
+    <h2 class="scene-title">工具桥：四个函数只用这五件工具</h2>
+    <p class="scene-lead">先在小例子上 Predict–Run，全对了再去碰真函数。错了的点开会显示正确输出。</p>
+  </header>
+  <div id="warmupBox"></div>
+  <div class="callout card" style="border-color:var(--accent)">
+    <b>broadcasting 预告</b>（Q1.5 用，不用你写但要看懂）：<code>M_reduced / np.linalg.norm(M_reduced, axis=1, keepdims=True)</code> —— <code>axis=1</code> 沿行求模长得 (n,1)，<code>keepdims</code> 保持二维，(n,2)/(n,1) 按行广播 = 每行除以自己的模长。Q1.5 的归一化就这一行。
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 5 · 契约总览 + distinct_words 提示阶梯
+============================================================ -->
+<section class="scene" data-scene="5">
+  <header class="scene-header">
+    <span class="step-label">台阶 ④ · 补得完</span>
+    <h2 class="scene-title">函数 1/4：distinct_words —— 最简单，但有两个坑</h2>
+    <p class="scene-lead">先读契约卡，再写。卡住 20 分钟再点提示；提示逐级揭，能不点下级就不点。</p>
+  </header>
+
+  <div class="contract-grid">
+    <div class="contract">
+      <h4>输入</h4>
+      <p><code>corpus</code>：list of list of str。内层一个 list = 一篇文档的分词结果。</p>
+      <h4 style="margin-top:12px">输出（两个返回值！）</h4>
+      <p><code>corpus_words</code>：<b>sorted</b> 的去重词表；<code>n_corpus_words</code>：词表大小（int）。</p>
+    </div>
+    <div class="contract">
+      <h4>自检（notebook 紧跟的 sanity cell）</h4>
+      <p>测试语料期望：<code class="mono" style="font-size:12px;">['&lt;END&gt;','&lt;START&gt;','All',"All's",'ends','glitters','gold',"isn't",'that','well']</code>，n=10。</p>
+      <p style="color:var(--warn)"><b>坑 1</b>：忘记 sorted（顺序错则后面 word2ind 全错）。<b>坑 2</b>：返回 set 而不是 list（测试要 list）。</p>
+    </div>
+  </div>
+
+  <div class="card hint-ladder" id="ladder1">
+    <h3 style="margin-top:0">提示阶梯（distinct_words）</h3>
+    <div class="lv" data-lv="1"><span class="tag">提示 1 · 思路</span>flatten → 去重 → 排序。三件事各对应一个 Python 惯用法，场景 4 刚练过。</div>
+    <div class="lv" data-lv="2"><span class="tag">提示 2 · 形状</span><div class="code">corpus_words = ___(___(___ for doc in corpus for w in doc))
+n_corpus_words = ___(corpus_words)</div></div>
+    <div class="lv" data-lv="3"><span class="tag">提示 3 · 关键表达式</span>列表推导 flatten 的写法是 <code>[w for doc in corpus for w in doc]</code>（注意 for 的顺序：外层在前）。剩下两个空各是一个内置函数名。</div>
+    <button class="btn" data-ladder-next>点不下去了，揭下一级提示</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 6 · compute_co_occurrence_matrix 提示阶梯
+============================================================ -->
+<section class="scene" data-scene="6">
+  <header class="scene-header">
+    <span class="step-label">台阶 ④ · 补得完</span>
+    <h2 class="scene-title">函数 2/4：compute_co_occurrence_matrix —— 本章的硬骨头</h2>
+    <p class="scene-lead">3 分题。场景 3 你已经手算过它的输出——现在把手算过程翻译成循环。</p>
+  </header>
+
+  <div class="contract-grid">
+    <div class="contract">
+      <h4>输入 / 输出</h4>
+      <p>入：<code>corpus</code>, <code>window_size=4</code>。出：<code>M</code> (n_words × n_words 对称矩阵) + <code>word2ind</code> dict。</p>
+      <div class="sig">M[i][j] = 词 j 作为"词 i 的邻居"出现的总次数</div>
+    </div>
+    <div class="contract">
+      <h4>四条铁律（违反任何一条都对不上 M_test_ans）</h4>
+      <p>① 纯计数 +1，<b>无距离加权</b>；② 左右两边都数；③ 边界处窗口自然截断（句首词左边没有就是没有，别环绕）；④ 词表顺序 = distinct_words 返回的顺序。</p>
+    </div>
+  </div>
+
+  <div class="card hint-ladder" id="ladder2">
+    <h3 style="margin-top:0">提示阶梯（compute_co_occurrence_matrix）</h3>
+    <div class="lv" data-lv="1"><span class="tag">提示 1 · 把手算翻译成人话</span>对每篇文档、对每个位置 i（中心词）：向左看最多 window_size 个、向右看最多 window_size 个，每个邻居在 M[中心][邻居] 加 1。</div>
+    <div class="lv" data-lv="2"><span class="tag">提示 2 · 骨架</span><div class="code">words, n_words = distinct_words(corpus)   <span class="cm"># 已给</span>
+M = np.zeros((n_words, n_words))
+word2ind = {w: i for i, w in enumerate(words)}
+<span class="kw">for</span> doc <span class="kw">in</span> corpus:
+    <span class="kw">for</span> i, center <span class="kw">in</span> enumerate(doc):
+        lo = ___(0, i - window_size)     <span class="cm"># 左边界：不能 &lt; 0</span>
+        hi = ___(len(doc), i + window_size + 1)  <span class="cm"># 右边界：不能越界</span>
+        <span class="kw">for</span> j <span class="kw">in</span> range(lo, hi):
+            <span class="kw">if</span> j == i: <span class="kw">continue</span>   <span class="cm"># 自己不算自己的邻居</span>
+            M[___][___] += 1</div></div>
+    <div class="lv" data-lv="3"><span class="tag">提示 3 · 索引</span>中心词和邻居都是<b>字符串</b>，M 的下标是整数——中间隔着 word2ind。两个空分别是 <code>word2ind[center]</code> 和 <code>word2ind[doc[j]]</code>。lo/hi 两个空是 <code>max</code> / <code>min</code>。</div>
+    <button class="btn" data-ladder-next>点不下去了，揭下一级提示</button>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">自检顺序（别跳步）</h3>
+    <ol style="font-size:15px;line-height:2;margin:0;padding-left:22px;">
+      <li>先跑测试 cell（M_test_ans 精确对账）。</li>
+      <li>对不上先看形状和 word2ind，再看对称性（<code>np.allclose(M, M.T)</code>）。</li>
+      <li>最常见 bug：<b>只数了右边</b>（矩阵上三角，不对称）；或 <b>把 window 写成 range(1, window_size)</b> 漏掉最远的邻居。</li>
+    </ol>
+  </div>
+
+  <div class="checkpoint" data-check="cp3">
+    <div class="cp-head">◈ 检验点 3</div>
+    <div>下列哪个实现细节会直接导致和 M_test_ans 对不上？</div>
+    <div class="quiz-opt" data-v="0">A. 用 np.zeros 而不是 np.ones 初始化</div>
+    <div class="quiz-opt" data-v="1">B. 邻居离中心越远加的越少（距离加权）</div>
+    <div class="quiz-opt" data-v="2">C. word2ind 用 enumerate(words) 构造</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 7 · reduce_to_k_dim + plot_embeddings
+============================================================ -->
+<section class="scene" data-scene="7">
+  <header class="scene-header">
+    <span class="step-label">台阶 ④ · 补得完</span>
+    <h2 class="scene-title">函数 3+4：降维与画图 —— 各值 1 分的 API 调用</h2>
+    <p class="scene-lead">这两题的学习目标不是算法（K01 学过 SVD），而是<b>读懂 API 契约</b>。</p>
+  </header>
+
+  <div class="contract-grid">
+    <div class="contract">
+      <h4>reduce_to_k_dim(M, k=2)</h4>
+      <div class="sig">sklearn.decomposition.TruncatedSVD</div>
+      <p>返回 (n_words, k)，数学上 = U·Σ 前 k 列。必须传 <code>n_iter=10</code>（notebook 里给了变量 <code>n_iters</code>）。</p>
+    </div>
+    <div class="contract">
+      <h4>plot_embeddings(M_reduced, word2ind, words)</h4>
+      <div class="sig">plt.scatter(x, y) + plt.annotate(label, (x, y))</div>
+      <p>只画 <code>words</code> 列表里指定的词（不是全部词表），每个点旁边标词。</p>
+    </div>
+  </div>
+
+  <div class="card hint-ladder" id="ladder3">
+    <h3 style="margin-top:0">提示阶梯（两个一起）</h3>
+    <div class="lv" data-lv="1"><span class="tag">提示 1 · 思路</span>SVD：建模型 → fit → 取结果。画图：对 words 里每个词，用 word2ind 查行号，取出 (x, y)，scatter + annotate。</div>
+    <div class="lv" data-lv="2"><span class="tag">提示 2 · 形状</span><div class="code">svd = TruncatedSVD(n_components=___, n_iter=n_iters)
+M_reduced = svd.___(M)        <span class="cm"># 一个方法完成 fit+transform</span>
+
+<span class="kw">for</span> w <span class="kw">in</span> words:
+    x, y = M_reduced[___]
+    plt.scatter(x, y, marker='x', color='red')
+    plt.___(w, (x, y))</div></div>
+    <div class="lv" data-lv="3"><span class="tag">提示 3 · API 名</span><code>fit_transform</code>、<code>k</code>、<code>word2ind[w]</code>、<code>annotate</code>。画图这题去对官方样张 question_1.4_test.png：形状大致像就行，肉眼判据。</div>
+    <button class="btn" data-ladder-next>点不下去了，揭下一级提示</button>
+  </div>
+
+  <div class="checkpoint" data-check="cp4">
+    <div class="cp-head">◈ 检验点 4</div>
+    <div>reduce_to_k_dim 返回的 M_reduced 在数学上是什么？</div>
+    <div class="quiz-opt" data-v="0">A. 完整 SVD 的 U 矩阵</div>
+    <div class="quiz-opt" data-v="1">B. U·Σ 的前 k 列（每词一个 k 维向量）</div>
+    <div class="quiz-opt" data-v="2">C. Vᵀ 的前 k 行</div>
+    <div class="cp-feedback"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 8 · Q1.5 流水线
+============================================================ -->
+<section class="scene" data-scene="8">
+  <header class="scene-header">
+    <span class="step-label">台阶 ④ · 合龙</span>
+    <h2 class="scene-title">Q1.5：四个零件组装成流水线</h2>
+    <p class="scene-lead">真语料（150 条 IMDB 影评）+ window=4 + k=2 + 归一化 + 画图。跑完要对样张、写书面分析。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">流水线五拍（notebook 已给框架，你只填你写的四个函数）</h3>
+    <div class="code">corpus = read_corpus()                      <span class="cm"># 150 条影评，已给</span>
+words, n_words = distinct_words(corpus)     <span class="cm"># 你的 ①</span>
+M, word2ind = compute_co_occurrence_matrix(corpus, window_size=4)  <span class="cm"># 你的 ②</span>
+M_reduced = reduce_to_k_dim(M, k=2)         <span class="cm"># 你的 ③</span>
+M_reduced /= np.linalg.norm(M_reduced, axis=1, keepdims=True)      <span class="cm"># 已给：归一化到单位圆</span>
+plot_embeddings(M_reduced, word2ind, words_to_plot)                <span class="cm"># 你的 ④</span></div>
+    <p style="font-size:14.5px;color:var(--fg-2);">为什么要归一化：TruncatedSVD 给的是 U·Σ，模长携带词频信息（高频词模长大）；Q1.5 只关心<b>方向</b>（谁和谁夹角小），所以把每行除以自己的模长，让所有词落在单位圆附近——比较的就只剩方向了。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">书面 a/b 怎么写（3 分，别只写"聚类挺明显"）</h3>
+    <ul style="font-size:15px;line-height:2;margin:0;padding-left:20px;">
+      <li><b>a. 聚类/同义词观察</b>：指名道姓——哪几个词聚在一起、为什么合理（影评语料的领域词，如 positive/negative 情感词）。至少 2 组具体例子。</li>
+      <li><b>b. 失效观察</b>：哪些<b>应该</b>近的词没有近，或不该近的近了？归因到方法本身：共现计数不看语义角色（"good/bad" 都常和 "movie" 共现 → 被拉近）、2 维压缩损失、150 条语料太小。</li>
+    </ul>
+    <div class="callout" style="margin-bottom:0;">判据：写之前先问自己"这句话不看图的人能复现我的观察吗"。不能就重写。</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     场景 9 · 撤桥检验 + 验收
+============================================================ -->
+<section class="scene" data-scene="9">
+  <header class="scene-header">
+    <span class="step-label">台阶 ⑤ · 撤桥</span>
+    <h2 class="scene-title">撤桥：关掉本页，验收四问</h2>
+    <p class="scene-lead">轮椅的价值在于能拆掉。下面每条都能独立做到，A1 Part 1 才算你的。</p>
+  </header>
+
+  <div class="card">
+    <h3 style="margin-top:0">验收清单（全 ✓ 才算过）</h3>
+    <table class="cmp">
+      <tr><th>验收项</th><th>标准</th></tr>
+      <tr><td>关页写码</td><td>不看本页提示阶梯，在 notebook 里独立写完四个函数</td></tr>
+      <tr><td>测试全绿</td><td>Q1.1 精确排序断言、Q1.2 对 M_test_ans、Q1.3 shape、Q1.4 对样张</td></tr>
+      <tr><td>手算复现</td><td>白纸数出 toy 语料完整 10×10 矩阵，和 M_test_ans 一致</td></tr>
+      <tr><td>能讲清</td><td>书面 a/b 具体、有归因；合书自测全过</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">合书自测 · 能讲清才算过</h3>
+    <ul class="self-test" id="selfTest"></ul>
+  </div>
+
+  <div class="card score-card">
+    <div style="font-size:14px;color:var(--fg-3);letter-spacing:.1em;text-transform:uppercase;">本页得分</div>
+    <div class="score-big" id="finalScore">0 / 8</div>
+    <p style="color:var(--fg-2);max-width:560px;margin:10px auto 20px;" id="finalMsg"></p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a class="btn btn-primary btn-large" href="index.html" style="text-decoration:none;">回到学习路径 →</a>
+      <button class="btn btn-large" id="resetBtn">重置本页</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">本页没覆盖的部分（诚实清单）</h3>
+    <ul style="font-size:14px;color:var(--fg-2);line-height:1.9;margin:0;padding-left:18px;">
+      <li><b>A1 Part 2（GloVe 分析）不在本页</b>：它是「加载预训练向量 + 相似度/类比/偏见书面分析」，代码基本已给，硬门槛 = 下载 glove-wiki-gigaword-200（约 250MB）。网络就绪后单独过。</li>
+      <li>提示阶梯的最末级仍留了空要你填——这是刻意的：填完那一刻代码才是你的。</li>
+      <li>Q1.5 的实际运行时长随机器变（150 条语料的 SVD，量级是秒~分钟），以你本机为准。</li>
+      <li>场景 3 的手算只覆盖 10×10 中的两行；完整矩阵要自己白纸推一遍（验收清单第 3 条）。</li>
+    </ul>
+  </div>
+</section>
+
+</div>
+
+<div class="scene-footer">
+  <button class="btn" id="prevBtn">← 上一节</button>
+  <div class="dots" id="dots"></div>
+  <button class="btn btn-primary" id="nextBtn">下一节 →</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<noscript><p style="padding:100px 20px;text-align:center;">本页需要 JavaScript（全部内容离线本地运行，不联网）。</p></noscript>
+
+<script src="assets/a1.js"></script>
+</body>
+</html>
